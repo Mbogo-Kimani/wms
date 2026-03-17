@@ -24,7 +24,23 @@ exports.getEmployee = async (req, res, next) => {
     if (!employee) {
       return res.sendError('Employee not found', 404);
     }
-    res.sendSuccess(employee);
+
+    // Add Reliability stats
+    const lateCount = await Attendance.countDocuments({ employeeId: employee._id, status: 'late' });
+    const absenceCount = await Attendance.countDocuments({ employeeId: employee._id, status: 'absent' });
+    const presentCount = await Attendance.countDocuments({ employeeId: employee._id, status: { $in: ['present', 'late', 'holiday_work'] } });
+    
+    const reliabilityScore = Math.max(0, 100 - (lateCount * 2) - (absenceCount * 5));
+
+    const stats = {
+      lateCount,
+      absenceCount,
+      presentCount,
+      reliabilityScore,
+      totalRecords: await Attendance.countDocuments({ employeeId: employee._id })
+    };
+
+    res.sendSuccess({ employee, stats });
   } catch (err) { next(err); }
 };
 

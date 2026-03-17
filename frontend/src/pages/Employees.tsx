@@ -7,7 +7,7 @@ import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Input from '../components/Input';
-import { UserPlus, Trash2, Edit, Search, X } from 'lucide-react';
+import { UserPlus, Trash2, Edit, Search, X, Eye } from 'lucide-react';
 
 const DEPARTMENTS = ['Operations', 'Logistics', 'Security', 'HR', 'IT', 'Maintenance', 'Administration', 'Quality Control'];
 const POSITIONS = ['Standard', 'Supervisor', 'Lead', 'Manager', 'Technician', 'Specialist', 'Intern'];
@@ -17,6 +17,7 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<any>(null);
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ['employees'],
@@ -111,6 +112,12 @@ export default function Employees() {
               <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
                   <button 
+                    onClick={() => setViewingEmployee(emp)}
+                    className="p-2 text-industrial-gray hover:text-industrial-blue hover:bg-industrial-blue/5 rounded-lg transition-colors"
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button 
                     onClick={() => handleEdit(emp)}
                     className="p-2 text-industrial-gray hover:text-industrial-blue hover:bg-industrial-blue/5 rounded-lg transition-colors"
                   >
@@ -138,6 +145,114 @@ export default function Employees() {
           isLoading={upsertMutation.isPending}
         />
       )}
+
+      {viewingEmployee && (
+        <WorkerDetailsModal 
+          employee={viewingEmployee} 
+          onClose={() => setViewingEmployee(null)} 
+        />
+      )}
+    </div>
+  );
+}
+
+function WorkerDetailsModal({ employee, onClose }: any) {
+  const { data: details, isLoading } = useQuery({
+    queryKey: ['employee', employee._id],
+    queryFn: async () => {
+      const res = await api.get(`/employees/${employee._id}`);
+      return res.data;
+    }
+  });
+
+  const { data: activity } = useQuery({
+    queryKey: ['employee-activity', employee._id],
+    queryFn: async () => {
+      const res = await api.get(`/employees/${employee._id}/activity`);
+      return res.data;
+    }
+  });
+
+  const stats = details?.stats;
+  const emp = details?.employee;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
+      <Card className="w-full max-w-2xl !p-0 overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="relative h-32 bg-industrial-slate">
+           <div className="absolute inset-0 bg-gradient-to-r from-industrial-blue/20 to-transparent" />
+           <Button variant="outline" className="absolute top-4 right-4 !bg-white/10 !border-white/20 !text-white h-8 w-8 !p-0 flex items-center justify-center" onClick={onClose}>
+             <X size={18} />
+           </Button>
+           <div className="absolute -bottom-12 left-8">
+             <div className="w-24 h-24 rounded-3xl bg-white border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                {emp?.profilePhoto ? (
+                  <img src={emp.profilePhoto} className="w-full h-full object-cover" alt={emp.name} />
+                ) : (
+                  <span className="text-4xl font-black text-industrial-blue">{employee.name[0]}</span>
+                )}
+             </div>
+           </div>
+        </div>
+
+        <div className="px-8 pt-16 pb-8 space-y-8">
+          <div>
+            <h2 className="text-2xl font-black text-industrial-slate">{employee.name}</h2>
+            <div className="flex items-center gap-2 mt-1">
+               <Badge variant="info">{employee.employeeId}</Badge>
+               <Badge variant={employee.status === 'active' ? 'success' : 'warning'}>{employee.status}</Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4">
+             <StatMini label="Reliability" value={`${stats?.reliabilityScore || 0}%`} color="text-industrial-orange" />
+             <StatMini label="Presence" value={stats?.presentCount || 0} color="text-green-600" />
+             <StatMini label="Late" value={stats?.lateCount || 0} color="text-amber-600" />
+             <StatMini label="Absence" value={stats?.absenceCount || 0} color="text-red-600" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-8">
+             <div className="space-y-4">
+                <h3 className="text-[10px] font-black text-industrial-gray uppercase tracking-widest border-b border-gray-100 pb-2">Employment Details</h3>
+                <DetailRow label="Department" value={employee.department} />
+                <DetailRow label="Position" value={employee.position} />
+                <DetailRow label="Joined" value={new Date(employee.dateHired).toLocaleDateString()} />
+                <DetailRow label="Email" value={employee.email} />
+             </div>
+             <div className="space-y-4">
+                <h3 className="text-[10px] font-black text-industrial-gray uppercase tracking-widest border-b border-gray-100 pb-2">Recent Timeline</h3>
+                <div className="max-h-[200px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                   {activity?.length > 0 ? activity.slice(0, 5).map((act: any, idx: number) => (
+                     <div key={idx} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded-lg border border-gray-100/50">
+                        <div className="font-bold text-industrial-slate">{new Date(act.date).toLocaleDateString()}</div>
+                        <Badge variant={act.status === 'present' ? 'success' : act.status === 'late' ? 'warning' : 'danger'} className="!text-[8px] !px-1.5 h-4">
+                          {act.status}
+                        </Badge>
+                     </div>
+                   )) : <p className="text-xs text-industrial-gray py-4 text-center">No activity found</p>}
+                </div>
+             </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function StatMini({ label, value, color }: any) {
+  return (
+    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex flex-col items-center justify-center">
+       <span className="text-[8px] font-black text-industrial-gray uppercase tracking-widest mb-1">{label}</span>
+       <span className={`text-lg font-black ${color}`}>{value}</span>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: any) {
+  return (
+    <div className="flex justify-between items-center text-sm">
+       <span className="text-industrial-gray font-medium">{label}</span>
+       <span className="font-bold text-industrial-slate">{value}</span>
     </div>
   );
 }

@@ -32,9 +32,46 @@ export default function Login() {
     }
   };
 
+  const [showDemo, setShowDemo] = useState(true);
+
+  const fillDemo = () => {
+    setEmail('admin@wms.com');
+    setPassword('password123');
+    setShowDemo(false);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-industrial-light">
-      <Card className="w-full max-w-[400px] !p-10">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-industrial-light relative overflow-hidden">
+      {/* Demo Multi-Step Modal */}
+      {showDemo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-industrial-slate/80 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-[400px] !p-8 border-t-8 border-industrial-orange animate-in zoom-in-95 duration-300">
+            <h2 className="text-xl font-black text-industrial-slate mb-2">Welcome to WMS Demo</h2>
+            <p className="text-sm text-industrial-gray mb-6 leading-relaxed">
+              This is a live production trial. To experience the system with full administrative privileges, use our demo credentials.
+            </p>
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
+              <div className="flex justify-between items-center text-[10px] font-black text-industrial-gray uppercase tracking-widest mb-2">
+                <span>Account Type</span>
+                <span className="text-industrial-orange">System Admin</span>
+              </div>
+              <p className="text-sm font-bold text-industrial-slate">Email: admin@wms.com</p>
+              <p className="text-sm font-bold text-industrial-slate">Pass: password123</p>
+            </div>
+            <Button fullWidth className="!bg-industrial-orange hover:!bg-orange-600 h-12" onClick={fillDemo}>
+              Auto-Fill & Access Demo
+            </Button>
+            <button 
+              onClick={() => setShowDemo(false)}
+              className="w-full mt-4 text-[10px] font-bold text-industrial-gray hover:text-industrial-slate uppercase tracking-widest"
+            >
+              I'll type it myself
+            </button>
+          </Card>
+        </div>
+      )}
+
+      <Card className="w-full max-w-[400px] !p-10 z-10">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-industrial-blue text-white rounded-2xl mb-4 shadow-lg shadow-blue-900/20">
             <Lock size={32} />

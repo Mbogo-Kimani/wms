@@ -23,6 +23,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 require('./jobs/attendanceCron');
 require('./jobs/attendanceAutoAbsent');
 require('./jobs/leaveYearlyReset');
+require('./jobs/antiSleep');
 
 // Connect to Database
 connectDB();
