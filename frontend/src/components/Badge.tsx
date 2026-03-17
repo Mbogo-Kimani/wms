@@ -3,9 +3,10 @@ import React from 'react';
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  className?: string;
 }
 
-const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral' }) => {
+const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', className = '' }) => {
   const styles = {
     success: 'bg-green-100 text-green-700',
     warning: 'bg-yellow-100 text-yellow-700',
@@ -15,7 +16,7 @@ const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral' }) => {
   };
 
   return (
-    <span className={`badge ${styles[variant]}`}>
+    <span className={`badge ${styles[variant]} ${className}`}>
       {children}
     </span>
   );
