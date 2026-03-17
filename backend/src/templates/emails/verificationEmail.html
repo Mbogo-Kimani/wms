@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { background: #0f172a; padding: 30px; text-align: center; }
+        .header h1 { color: #f97316; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+        .header h1 span { color: #ffffff; }
+        .content { padding: 40px; color: #334155; line-height: 1.6; }
+        .content h2 { color: #0f172a; margin-top: 0; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
+        .btn { display: inline-block; padding: 14px 28px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>INDUSTRIAL<span>WMS</span></h1>
+        </div>
+        <div class="content">
+            <h2>Verify Your Email</h2>
+            <p>Hello {{userName}},</p>
+            <p>Thank you for registering with Industrial WMS. To complete your registration and allow the administrator to review your account, please verify your email address by clicking the button below.</p>
+            
+            <a href="{{actionUrl}}" class="btn">Verify Email Address</a>
+            
+            <p>If you did not register for this account, you can safely ignore this email.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

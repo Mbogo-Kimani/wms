@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-industrial-light text-industrial-slate font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+  }
+  
+  .btn {
+    @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-industrial-blue text-white hover:bg-opacity-90;
+  }
+  
+  .btn-secondary {
+    @apply bg-industrial-gray text-white hover:bg-opacity-90;
+  }
+  
+  .btn-accent {
+    @apply bg-industrial-orange text-white hover:bg-opacity-90;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-industrial-blue text-industrial-blue hover:bg-industrial-blue hover:text-white;
+  }
+
+  .input-field {
+    @apply w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-industrial-blue focus:border-transparent transition-all;
+  }
+
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider;
+  }
+}

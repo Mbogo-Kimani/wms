@@ -1,0 +1,53 @@
+.env
+# Environment Variables
+
+This file is used to store environment variables for the application. It should not be committed to version control.
+
+## Example
+
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=myuser
+DB_PASSWORD=mypassword
+DB_NAME=mydatabase
+
+# Application Configuration
+APP_ENV=development
+APP_SECRET=mysecretkey
+APP_PORT=3000
+
+# API Keys
+API_KEY=myapikey
+```
+
+## Usage
+
+1. Create a `.env` file in the root directory of your project.
+2. Add your environment variables to the file following the format `KEY=value`.
+3. Ensure the `.env` file is added to your `.gitignore` file to prevent it from being committed to version control.
+
+## Notes
+
+- Never commit sensitive information like passwords or API keys to version control.
+- Use different environment variables for different environments (development, staging, production).
+- Consider using a tool like `dotenv` to load environment variables in your application.
+
+node_modules
+dist
+
+.env
+
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
