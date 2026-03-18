@@ -14,8 +14,20 @@ const generateToken = (user) => {
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password, religion, religiousRestDay } = req.body;
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.sendError('User already exists', 400);
+    
+    // 1. Check for existing User
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // Self-Cleaning: Check if this user is an orphan (no employee profile)
+      const hasEmployee = await Employee.findOne({ userId: existingUser._id });
+      if (!hasEmployee && existingUser.role === 'worker') {
+        // Safe to remove orphan and let new registration proceed
+        await User.findByIdAndDelete(existingUser._id);
+        console.log(`Cleaned up orphaned user: ${email}`);
+      } else {
+        return res.sendError('User already exists with an active profile', 400);
+      }
+    }
 
     const user = await User.create({ 
       name, email, password, religion, religiousRestDay,
@@ -53,6 +65,9 @@ exports.login = async (req, res, next) => {
     let employee;
     if (user.accountStatus === 'verified') {
         employee = await Employee.findOne({ userId: user._id });
+        if (user.role === 'worker' && !employee) {
+            return res.sendError('Access denied: Employee profile not found.', 403);
+        }
     }
 
     const token = generateToken(user);
@@ -62,7 +77,7 @@ exports.login = async (req, res, next) => {
             id: user._id, 
             name: user.name, 
             role: user.role, 
-            employeeId: employee ? employee.employeeId : null,
+            employeeId: employee ? employee._id : null,
             accountStatus: user.accountStatus
         } 
     });

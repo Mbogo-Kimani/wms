@@ -53,7 +53,7 @@ export default function ScheduleManagement() {
         isHolidayShift,
         notes: 'Shift assigned via management console'
       });
-      alert('Shift assigned successfully');
+      // Success toast handled by api interceptor
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to assign shift');
     } finally {

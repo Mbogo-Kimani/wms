@@ -7,6 +7,7 @@ const dayjs = require('dayjs');
 cron.schedule('59 23 * * *', async () => {
   console.log('Running Auto-Absence Job...');
   try {
+    const today = dayjs().format('YYYY-MM-DD');
     const { isWeekend, isHoliday } = require('../utils/dateUtils');
     const holidayToday = await isHoliday(today);
     const weekendToday = await isWeekend(today);

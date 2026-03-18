@@ -1,7 +1,7 @@
 const LeaveRequest = require('../models/LeaveRequest');
 const LeaveBalance = require('../models/LeaveBalance');
 const calculateLeaveDays = require('../utils/calculateLeaveDays');
-const { sendEmail, sendTemplate, sendLeaveApprovalEmail } = require('../services/emailService');
+const { sendEmail, sendTemplate, sendLeaveApprovalEmail, notifyAdminLeaveRequest } = require('../services/emailService');
 const dayjs = require('dayjs');
 const logAction = require('../utils/auditLogger');
 
@@ -13,12 +13,9 @@ exports.applyLeave = async (req, res, next) => {
       leaveType, startDate, endDate, reason
     });
     
-    // Notify HR
-    await sendTemplate('hr@company.com', 'New Leave Request', 'accountNotification', {
-      userName: 'HR Manager',
-      message: `A new ${leaveType} leave request was submitted by ${req.user.name}.`,
-      actionUrl: `${process.env.FRONTEND_URL}/admin/leaves`
-    });
+    // Notify Admin
+    await notifyAdminLeaveRequest(req.user, request);
+
     res.sendSuccess(request, 'Leave request submitted', 201);
     await logAction(req, 'leave_applied', 'LeaveRequest', request._id, { type: leaveType });
   } catch (err) { next(err); }

@@ -24,27 +24,8 @@ exports.signIn = async (req, res) => {
     const settings = await CompanySettings.findOne();
     let locationVerified = false;
 
-    if (verifyWifi(req)) {
-      locationVerified = true;
-    } else {
-      if (shift.location && shift.location.lat !== 0 && lat && lng) {
-        const distance = getDistanceFromLatLonInMeters(lat, lng, shift.location.lat, shift.location.lng);
-        if (distance <= shift.location.radius) locationVerified = true;
-      }
-      if (!locationVerified && settings && lat && lng) {
-        const distance = getDistanceFromLatLonInMeters(lat, lng, settings.latitude, settings.longitude);
-        if (distance <= settings.allowedRadiusMeters) locationVerified = true;
-      }
-    }
-
-    if (!locationVerified) {
-      if (!lat && !lng && !ssid) {
-        console.warn('Bypassing location verification for local testing.');
-        locationVerified = true;
-      } else {
-        return res.sendError('Location verification failed. You must be within GPS radius or on company WiFi.', 403);
-      }
-    }
+    // Broaden verification: Accept from any location/WiFi
+    locationVerified = true;
 
     const WorkPolicy = require('../models/WorkPolicy');
     const { isWeekend, isHoliday } = require('../utils/dateUtils');
@@ -137,13 +118,14 @@ exports.signOut = async (req, res) => {
     const attendance = await Attendance.findOne({ employeeId: employee._id, date: today });
     if (!attendance) return res.sendError('No sign-in record found for today.', 404);
 
-    const shift = employee.shiftId;
-    if (shift && shift.location && shift.location.lat && lat && lng) {
-      const distance = getDistanceFromLatLonInMeters(lat, lng, shift.location.lat, shift.location.lng);
-      if (distance > shift.location.radius) {
-        return res.sendError(`Too far from workplace. Detected: ${Math.round(distance)}m away.`, 400);
-      }
-    }
+    // Verification bypassed as requested
+    // const shift = employee.shiftId;
+    // if (shift && shift.location && shift.location.lat && lat && lng) {
+    //   const distance = getDistanceFromLatLonInMeters(lat, lng, shift.location.lat, shift.location.lng);
+    //   if (distance > shift.location.radius) {
+    //     return res.sendError(`Too far from workplace. Detected: ${Math.round(distance)}m away.`, 400);
+    //   }
+    // }
 
     if (attendance.signOutTime) return res.sendError('Already signed out.', 400);
 

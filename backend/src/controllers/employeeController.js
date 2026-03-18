@@ -2,10 +2,11 @@ const mongoose = require('mongoose');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
+const LeaveBalance = require('../models/LeaveBalance');
 
 exports.getEmployees = async (req, res, next) => {
   try {
-    const employees = await Employee.find().populate('shiftId').populate('workPolicy');
+    const employees = await Employee.find().populate('shiftId').populate('workPolicy').populate('userId', 'role');
     res.sendSuccess(employees);
   } catch (err) { next(err); }
 };
@@ -16,9 +17,9 @@ exports.getEmployee = async (req, res, next) => {
     let employee;
 
     if (mongoose.Types.ObjectId.isValid(id)) {
-      employee = await Employee.findById(id).populate('shiftId').populate('workPolicy');
+      employee = await Employee.findById(id).populate('shiftId').populate('workPolicy').populate('userId', 'role');
     } else {
-      employee = await Employee.findOne({ employeeId: id }).populate('shiftId').populate('workPolicy');
+      employee = await Employee.findOne({ employeeId: id }).populate('shiftId').populate('workPolicy').populate('userId', 'role');
     }
 
     if (!employee) {
@@ -40,7 +41,9 @@ exports.getEmployee = async (req, res, next) => {
       totalRecords: await Attendance.countDocuments({ employeeId: employee._id })
     };
 
-    res.sendSuccess({ employee, stats });
+    const balance = await LeaveBalance.findOne({ employeeId: employee._id, year: new Date().getFullYear() });
+
+    res.sendSuccess({ employee, stats, balance });
   } catch (err) { next(err); }
 };
 
@@ -67,19 +70,30 @@ exports.createEmployee = async (req, res, next) => {
     const employee = new Employee({
       name,
       email,
-      phone,
+      phone: phone || '',
       department,
       position,
       dateHired: dateHired || new Date(),
       shiftId,
       userId: user._id,
-      religion,
-      religiousRestDay,
-      weekendWorker,
-      holidayWorker,
+      religion: religion || '',
+      religiousRestDay: religiousRestDay || 'None',
+      weekendWorker: weekendWorker || false,
+      holidayWorker: holidayWorker || false,
       status: 'active'
     });
     await employee.save({ session });
+
+    // 2b. Initialize Leave Balance
+    const leaveBalance = new LeaveBalance({
+      employeeId: employee._id,
+      year: new Date().getFullYear(),
+      annualLeaveTotal: 20,
+      annualLeaveUsed: 0,
+      sickLeaveUsed: 0,
+      remainingLeave: 20
+    });
+    await leaveBalance.save({ session });
 
     // 3. Link Employee back to User
     user.employeeId = employee._id;
@@ -98,7 +112,10 @@ exports.createEmployee = async (req, res, next) => {
 
 exports.updateEmployee = async (req, res, next) => {
   try {
-    const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true })
+      .populate('shiftId')
+      .populate('workPolicy')
+      .populate('userId', 'role');
     if (!employee) return res.sendError('Employee not found', 404);
     res.sendSuccess(employee, 'Employee updated');
   } catch (err) { next(err); }
@@ -106,10 +123,27 @@ exports.updateEmployee = async (req, res, next) => {
 
 exports.deleteEmployee = async (req, res, next) => {
   try {
-    const employee = await Employee.findByIdAndDelete(req.params.id);
+    const employee = await Employee.findById(req.params.id);
     if (!employee) return res.sendError('Employee not found', 404);
-    res.sendSuccess(null, 'Employee deleted');
-  } catch (err) { next(err); }
+
+    // 1. Delete associated User if exists
+    if (employee.userId) {
+      await User.findByIdAndDelete(employee.userId);
+    }
+
+    // 2. Delete Leave Balances
+    await LeaveBalance.deleteMany({ employeeId: employee._id });
+
+    // 3. Delete Attendance records
+    await Attendance.deleteMany({ employeeId: employee._id });
+
+    // 4. Delete Employee profile
+    await Employee.findByIdAndDelete(req.params.id);
+
+    res.sendSuccess(null, 'Employee and all associated data deleted successfully');
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.getEmployeeActivity = async (req, res, next) => {

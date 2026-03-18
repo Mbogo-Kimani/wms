@@ -93,18 +93,25 @@ exports.rejectWorker = async (req, res, next) => {
       console.error('Email Notification Failed:', emailErr.message);
     }
 
-    // 2. Delete User
+    // 2. Cleanup associated data if any (Employee, LeaveBalance)
+    const employee = await Employee.findOne({ userId });
+    if (employee) {
+        await LeaveBalance.deleteMany({ employeeId: employee._id });
+        await Employee.findByIdAndDelete(employee._id);
+    }
+
+    // 3. Delete User
     await User.findByIdAndDelete(userId);
 
-    // 3. Audit Log
+    // 4. Audit Log
     await AuditLog.create({
-      user: req.user._id,
+      userId: req.user._id, // Fixed field name to userId to match AuditLog schema
       action: 'ADMIN_REJECTED_WORKER',
       details: `Rejected registration for: ${user.name} (${user.email})`,
-      targetId: userId,
-      targetModel: 'User'
+      entityId: userId,
+      entityType: 'User'
     });
 
-    res.sendSuccess(null, 'Worker registration rejected and account removed');
+    res.sendSuccess(null, 'Worker registration rejected and all associated data removed');
   } catch (err) { next(err); }
 };

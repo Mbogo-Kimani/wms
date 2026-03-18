@@ -12,8 +12,11 @@ export default function Register() {
     name: '',
     email: '',
     password: '',
+    phone: '',
     religion: '',
-    religiousRestDay: 'None'
+    religiousRestDay: 'None',
+    weekendWorker: false,
+    holidayWorker: false
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -98,6 +101,38 @@ export default function Register() {
             onChange={(e) => setFormData({...formData, password: e.target.value})}
             disabled={loading}
           />
+          <Input 
+            label="Phone Number"
+            placeholder="+254..."
+            required 
+            value={formData.phone} 
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            disabled={loading}
+          />
+
+          <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+             <label className="text-xs font-black text-industrial-gray uppercase tracking-widest px-1">Worker Availability</label>
+             <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-xl border border-gray-100 hover:border-industrial-orange transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.weekendWorker} 
+                      onChange={(e) => setFormData({...formData, weekendWorker: e.target.checked})}
+                      className="rounded border-gray-300 text-industrial-orange focus:ring-industrial-orange"
+                    />
+                    <span className="text-xs font-bold text-industrial-slate">Weekend Worker</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-xl border border-gray-100 hover:border-industrial-orange transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.holidayWorker} 
+                      onChange={(e) => setFormData({...formData, holidayWorker: e.target.checked})}
+                      className="rounded border-gray-300 text-industrial-orange focus:ring-industrial-orange"
+                    />
+                    <span className="text-xs font-bold text-industrial-slate">Holiday Worker</span>
+                </label>
+             </div>
+          </div>
 
           
           <div className="grid grid-cols-2 gap-4">

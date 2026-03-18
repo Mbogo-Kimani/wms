@@ -178,12 +178,15 @@ function WorkerDetailsModal({ employee, onClose }: any) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
-      <Card className="w-full max-w-2xl !p-0 overflow-hidden animate-in fade-in zoom-in duration-300">
-        <div className="relative h-32 bg-industrial-slate">
+      <Card className="w-full max-w-2xl !p-0 overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[95vh] flex flex-col">
+        <div className="relative h-32 bg-industrial-slate shrink-0">
            <div className="absolute inset-0 bg-gradient-to-r from-industrial-blue/20 to-transparent" />
-           <Button variant="outline" className="absolute top-4 right-4 !bg-white/10 !border-white/20 !text-white h-8 w-8 !p-0 flex items-center justify-center" onClick={onClose}>
-             <X size={18} />
-           </Button>
+           <button 
+             onClick={onClose}
+             className="absolute top-4 right-4 z-50 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-xl p-2 text-white transition-all shadow-lg border border-white/20"
+           >
+             <X size={20} />
+           </button>
            <div className="absolute -bottom-12 left-8">
              <div className="w-24 h-24 rounded-3xl bg-white border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
                 {emp?.profilePhoto ? (
@@ -195,7 +198,7 @@ function WorkerDetailsModal({ employee, onClose }: any) {
            </div>
         </div>
 
-        <div className="px-8 pt-16 pb-8 space-y-8">
+        <div className="px-8 pt-16 pb-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
           <div>
             <h2 className="text-2xl font-black text-industrial-slate">{employee.name}</h2>
             <div className="flex items-center gap-2 mt-1">
@@ -211,13 +214,26 @@ function WorkerDetailsModal({ employee, onClose }: any) {
              <StatMini label="Absence" value={stats?.absenceCount || 0} color="text-red-600" />
           </div>
 
+          <div className="grid grid-cols-3 gap-4">
+             <StatMini label="Annual Leave Total" value={details?.balance?.annualLeaveTotal || 0} color="text-industrial-blue" />
+             <StatMini label="Leave Used" value={(details?.balance?.annualLeaveUsed || 0) + (details?.balance?.sickLeaveUsed || 0)} color="text-amber-600" />
+             <StatMini label="Leave Remaining" value={details?.balance?.remainingLeave || 0} color="text-green-600" />
+          </div>
+
           <div className="grid grid-cols-2 gap-8">
              <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-industrial-gray uppercase tracking-widest border-b border-gray-100 pb-2">Employment Details</h3>
-                <DetailRow label="Department" value={employee.department} />
-                <DetailRow label="Position" value={employee.position} />
-                <DetailRow label="Joined" value={new Date(employee.dateHired).toLocaleDateString()} />
-                <DetailRow label="Email" value={employee.email} />
+                <DetailRow label="System Role" value={emp?.userId?.role || employee.role || 'Worker'} />
+                <DetailRow label="Department" value={emp?.department || employee.department} />
+                <DetailRow label="Position" value={emp?.position || employee.position} />
+                <DetailRow label="Joined" value={new Date(emp?.dateHired || employee.dateHired).toLocaleDateString()} />
+                <DetailRow label="Email" value={emp?.email || employee.email} />
+                <DetailRow label="Phone" value={emp?.phone || employee.phone || 'N/A'} />
+                <DetailRow label="Religion" value={emp?.religion || employee.religion || 'N/A'} />
+                <DetailRow label="Rest Day" value={emp?.religiousRestDay || employee.religiousRestDay || 'None'} />
+                <DetailRow label="Assigned Shift" value={emp?.shiftId?.name || employee.shiftId?.name || 'Standard Shift'} />
+                <DetailRow label="Shift Hours" value={emp?.shiftId ? `${emp.shiftId.startTime} — ${emp.shiftId.endTime}` : (employee.shiftId ? `${employee.shiftId.startTime} — ${employee.shiftId.endTime}` : '08:00 — 17:00')} />
+                <DetailRow label="Worker Availability Score" value={`${stats?.reliabilityScore || 100}%`} />
              </div>
              <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-industrial-gray uppercase tracking-widest border-b border-gray-100 pb-2">Recent Timeline</h3>
@@ -261,9 +277,14 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
   const [formData, setFormData] = useState(initialData || {
     name: '',
     email: '',
+    phone: initialData?.phone || '',
     password: '',
     department: 'Operations',
     position: 'Standard',
+    religion: initialData?.religion || '',
+    religiousRestDay: initialData?.religiousRestDay || 'None',
+    weekendWorker: initialData?.weekendWorker || false,
+    holidayWorker: initialData?.holidayWorker || false,
     shiftId: initialData?.shiftId?._id || '', 
     status: 'active',
     dateHired: initialData?.dateHired ? new Date(initialData.dateHired).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
@@ -352,6 +373,61 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
                 <option value="on_leave">On Leave</option>
                 <option value="inactive">Inactive</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <Input 
+               label="Phone Number" 
+               placeholder="+254..." 
+               value={formData.phone}
+               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+             />
+             <Input 
+               label="Religion" 
+               placeholder="e.g. Christian" 
+               value={formData.religion}
+               onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
+             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 items-end">
+            <div className="space-y-2">
+                <label className="text-[10px] font-bold text-industrial-gray uppercase">Rest Day</label>
+                <select 
+                  className="input-field"
+                  value={formData.religiousRestDay}
+                  onChange={(e) => setFormData({ ...formData, religiousRestDay: e.target.value })}
+                >
+                  <option value="None">None</option>
+                  <option value="Monday">Monday</option>
+                  <option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                  <option value="Saturday">Saturday</option>
+                  <option value="Sunday">Sunday</option>
+                </select>
+            </div>
+            <div className="flex flex-col gap-2 pb-2">
+               <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.weekendWorker} 
+                    onChange={(e) => setFormData({...formData, weekendWorker: e.target.checked})}
+                    className="rounded border-gray-300 text-industrial-blue focus:ring-industrial-blue"
+                  />
+                  <span className="text-xs font-bold text-industrial-slate">Weekend Worker</span>
+               </label>
+               <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.holidayWorker} 
+                    onChange={(e) => setFormData({...formData, holidayWorker: e.target.checked})}
+                    className="rounded border-gray-300 text-industrial-blue focus:ring-industrial-blue"
+                  />
+                  <span className="text-xs font-bold text-industrial-slate">Holiday Worker</span>
+               </label>
             </div>
           </div>
 

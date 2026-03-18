@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import Badge from '../components/Badge';
 import { Clock, LogOut, LogIn, Calendar, Bell, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 
 export default function WorkerDashboard() {
   const { location, error: geoError, getLocation } = useGeolocation();
@@ -23,10 +24,22 @@ export default function WorkerDashboard() {
   const { data: profile } = useQuery({
     queryKey: ['employeeProfile'],
     queryFn: async () => {
+      if (!user.employeeId || user.employeeId === 'null') {
+        throw new Error('No employee profile associated with this account');
+      }
       const res = await api.get(`/employees/${user.employeeId}`);
       return res.data;
-    }
+    },
+    retry: false
   });
+
+  useEffect(() => {
+    if (!user.employeeId || user.employeeId === 'null') {
+      toast.error("Your account has no associated employee profile. Please contact admin.");
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+  }, [user.employeeId]);
 
   const { data: leaveBalance } = useQuery({
     queryKey: ['leaveBalance'],
@@ -51,23 +64,29 @@ export default function WorkerDashboard() {
   const clockInMutation = useMutation({
     mutationFn: (coords: any) => api.post('/attendance/signin', coords),
     onSuccess: () => refetch(),
-    onError: (err: any) => alert(err.response?.data?.message || 'Failed to clock in')
+    onError: (err: any) => {
+      // toast.error is already handled by api.ts interceptor
+    }
   });
 
   const clockOutMutation = useMutation({
     mutationFn: (coords: any) => api.post('/attendance/signout', coords),
     onSuccess: () => refetch(),
-    onError: (err: any) => alert(err.response?.data?.message || 'Failed to clock out')
+    onError: (err: any) => {
+      // toast.error is already handled by api.ts interceptor
+    }
   });
 
   const handleClockAction = (type: 'in' | 'out') => {
+    // Non-blocking location fetch
     if (!location) {
-      alert("Fetching GPS... Please enable location services.");
+      toast.loading("Fetching GPS... Attempting clock action anyway.", { duration: 2000 });
       getLocation();
-      return;
     }
-    if (type === 'in') clockInMutation.mutate(location);
-    if (type === 'out') clockOutMutation.mutate(location);
+    
+    const payload = location || { lat: 0, lng: 0 }; // Send empty coords if not available
+    if (type === 'in') clockInMutation.mutate(payload);
+    if (type === 'out') clockOutMutation.mutate(payload);
   };
 
   if (isLoading) return <div className="p-8 text-center text-industrial-gray font-bold">Initializing Workstation...</div>;
@@ -84,7 +103,7 @@ export default function WorkerDashboard() {
           <h1 className="text-3xl font-extrabold tracking-tight">{user.name}</h1>
           <div className="mt-4 flex items-center gap-2 text-sm text-gray-400 font-bold uppercase tracking-wider">
             <Clock size={16} className="text-industrial-blue" />
-            Active Duty Shift: 07:00 — 15:00
+            {profile?.employee?.shiftId?.name || 'Assigned Shift'}: {profile?.employee?.shiftId?.startTime || '07:00'} — {profile?.employee?.shiftId?.endTime || '15:00'}
           </div>
         </div>
         <div className="absolute -right-4 -bottom-4 opacity-10">
@@ -99,11 +118,11 @@ export default function WorkerDashboard() {
         </div>
       )}
 
-      {profile?.religiousRestDay === dayjs().format('dddd') && (
+      {(profile?.employee?.religiousRestDay || profile?.religiousRestDay) === dayjs().format('dddd') && (
         <div className="flex items-center gap-3 p-4 bg-orange-50 text-orange-700 rounded-2xl border border-orange-100">
           <Bell size={20} className="animate-bounce" />
           <p className="text-sm font-bold">
-            Notice: Today is your religious rest day ({profile.religiousRestDay}).
+            Notice: Today is your religious rest day ({profile?.employee?.religiousRestDay || profile?.religiousRestDay}).
             Sign-in requires manager authorization.
           </p>
         </div>

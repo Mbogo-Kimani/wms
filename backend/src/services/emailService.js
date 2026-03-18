@@ -22,7 +22,7 @@ const renderTemplate = (templateName, data = {}) => {
   const defaultData = {
     year: new Date().getFullYear(),
     companyName: 'Industrial WMS',
-    actionUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+    actionUrl: process.env.FRONTEND_URL
   };
 
   const finalData = { ...defaultData, ...data };
@@ -71,6 +71,15 @@ exports.notifyAdminNewRegistration = async (user) => {
   });
 };
 
+exports.notifyAdminLeaveRequest = async (user, leaveRequest) => {
+  const adminEmail = 'mbogoestonkim@gmail.com';
+  await exports.sendTemplate(adminEmail, 'New Leave Request', 'accountNotification', {
+    userName: 'Admin',
+    message: `A new ${leaveRequest.leaveType} leave request was submitted by ${user.name} from ${leaveRequest.startDate} to ${leaveRequest.endDate}.`,
+    actionUrl: `${process.env.FRONTEND_URL}/admin/leaves`
+  });
+};
+
 exports.notifyWorkerVerified = async (user) => {
   await exports.sendTemplate(user.email, 'Your Account Has Been Verified', 'welcome', {
     userName: user.name,
@@ -95,7 +104,7 @@ exports.sendLeaveApprovalEmail = async (email, employeeName, startDate, endDate,
 };
 
 exports.sendVerificationEmail = async (user, token) => {
-  const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
   await exports.sendTemplate(user.email, 'Verify Your Email Address', 'verificationEmail', {
     userName: user.name,
     actionUrl: verificationUrl
@@ -103,7 +112,7 @@ exports.sendVerificationEmail = async (user, token) => {
 };
 
 exports.sendPasswordResetEmail = async (user, token) => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
   await exports.sendTemplate(user.email, 'Password Reset Request', 'passwordReset', {
     userName: user.name,
     actionUrl: resetUrl
