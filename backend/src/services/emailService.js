@@ -63,7 +63,7 @@ exports.sendTemplate = async (to, subject, templateName, data) => {
 // --- Transactional Wrappers ---
 
 exports.notifyAdminNewRegistration = async (user) => {
-  const adminEmail = 'mbogoestonkim@gmail.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kimanimbogo1st@gmail.com';
   await exports.sendTemplate(adminEmail, 'New Registration Pending Approval', 'accountNotification', {
     userName: 'Admin',
     message: `A new worker registration is pending approval: ${user.name} (${user.email})`,
@@ -72,7 +72,7 @@ exports.notifyAdminNewRegistration = async (user) => {
 };
 
 exports.notifyAdminLeaveRequest = async (user, leaveRequest) => {
-  const adminEmail = 'mbogoestonkim@gmail.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'kimanimbogo1st@gmail.com';
   await exports.sendTemplate(adminEmail, 'New Leave Request', 'accountNotification', {
     userName: 'Admin',
     message: `A new ${leaveRequest.leaveType} leave request was submitted by ${user.name} from ${leaveRequest.startDate} to ${leaveRequest.endDate}.`,
