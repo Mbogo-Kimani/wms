@@ -129,15 +129,23 @@ exports.signOut = async (req, res) => {
 
     if (attendance.signOutTime) return res.sendError('Already signed out.', 400);
 
+    const shift = employee.shiftId;
     const now = dayjs();
-    const [endHour, endMin] = shift.endTime.split(':');
-    const shiftEndTime = dayjs(today).hour(endHour).minute(endMin).second(0);
-    const overtimeThreshold = shiftEndTime.add(shift.overtimeAfterMinutes || 0, 'minute');
-
     let overtimeMinutes = 0;
-    if (now.isAfter(overtimeThreshold)) {
-      overtimeMinutes = now.diff(shiftEndTime, 'minute');
-      attendance.status = 'overtime';
+
+    if (shift && shift.endTime) {
+      try {
+        const [endHour, endMin] = shift.endTime.split(':');
+        const shiftEndTime = dayjs(today).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
+        const overtimeThreshold = shiftEndTime.add(shift.overtimeAfterMinutes || 0, 'minute');
+
+        if (now.isAfter(overtimeThreshold)) {
+          overtimeMinutes = now.diff(shiftEndTime, 'minute');
+          attendance.status = 'overtime';
+        }
+      } catch (err) {
+        console.error('Error calculating overtime during sign-out:', err);
+      }
     }
 
     attendance.signOutTime = now.toDate();

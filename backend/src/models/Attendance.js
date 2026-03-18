@@ -21,7 +21,7 @@ const attendanceSchema = new mongoose.Schema({
   religiousOverride: { type: Boolean, default: false },
   status: { 
     type: String, 
-    enum: ['present', 'late', 'absent', 'on_leave', 'half_day', 'holiday_work', 'weekend_work', 'religious_day_off'], 
+    enum: ['present', 'late', 'absent', 'on_leave', 'half_day', 'holiday_work', 'weekend_work', 'religious_day_off', 'overtime'], 
     default: 'present' 
   },
   overtimeMinutes: { type: Number, default: 0 }
