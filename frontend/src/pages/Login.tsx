@@ -121,15 +121,20 @@ export default function Login() {
                   <p className="text-sm text-industrial-gray mb-8 leading-relaxed">
                     Once you've registered, log in as <strong>Admin</strong> to verify your worker profile. This activates the account and allows worker-level access to the portal.
                   </p>
-                  <Button fullWidth onClick={fillDemo} className="!bg-industrial-orange hover:!bg-orange-600 h-14 text-base shadow-lg shadow-orange-500/20">
-                    Auto-Fill Admin & Explore
-                  </Button>
-                  <button 
-                    onClick={() => setShowDemo(false)}
-                    className="w-full mt-6 text-[10px] font-bold text-industrial-gray hover:text-industrial-slate uppercase tracking-widest transition-colors"
-                  >
-                    I'll explore manually
-                  </button>
+                  <div className="space-y-3">
+                    <Button fullWidth onClick={fillDemo} className="!bg-industrial-orange hover:!bg-orange-600 h-14 text-base shadow-lg shadow-orange-500/20">
+                      Auto-Fill Admin & Explore
+                    </Button>
+                    <Button fullWidth variant="outline" onClick={() => { setShowDemo(false); navigate('/register'); }} className="h-12">
+                      Register as Worker
+                    </Button>
+                    <button 
+                      onClick={() => setShowDemo(false)}
+                      className="w-full pt-2 text-[10px] font-bold text-industrial-gray hover:text-industrial-slate uppercase tracking-widest transition-colors"
+                    >
+                      I'll explore the login form
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
