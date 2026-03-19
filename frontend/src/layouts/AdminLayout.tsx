@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Shield,
   Archive as FileBox,
-  UserCheck
+  UserCheck,
+  User as UserIcon
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -36,6 +37,7 @@ export default function AdminLayout() {
     { path: '/admin/schedules', icon: <Shield size={20} />, label: 'Scheduling', roles: ['admin', 'manager', 'supervisor'] },
     { path: '/admin/analytics', icon: <TrendingUp size={20} />, label: 'Analytics', roles: ['admin', 'manager', 'supervisor'] },
     { path: '/admin/reports', icon: <FileBox size={20} />, label: 'Reports', roles: ['admin', 'manager', 'supervisor'] },
+    { path: '/admin/profile', icon: <UserIcon size={20} />, label: 'Profile', roles: ['admin', 'manager', 'supervisor'] },
     { path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['admin'] },
   ];
 
@@ -115,12 +117,15 @@ export default function AdminLayout() {
             <button className="p-2 text-industrial-gray hover:text-industrial-blue rounded-full hover:bg-gray-100 transition-colors">
               <Bell size={20} />
             </button>
-            <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
+            <Link to="/admin/profile" className="flex items-center gap-2 pl-4 border-l border-gray-200 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-full bg-industrial-orange flex items-center justify-center text-white font-bold text-sm">
-                AD
+                {user.name ? user.name[0].toUpperCase() : 'A'}
               </div>
-              <span className="text-sm font-semibold text-industrial-slate hidden sm:block">Admin</span>
-            </div>
+              <div className="hidden sm:block">
+                <p className="text-xs font-bold text-industrial-slate leading-none">{user.name || 'Admin'}</p>
+                <p className="text-[8px] font-black text-industrial-orange uppercase tracking-tighter mt-1">{role}</p>
+              </div>
+            </Link>
           </div>
         </header>
 

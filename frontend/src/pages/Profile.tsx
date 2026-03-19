@@ -105,7 +105,7 @@ export default function Profile() {
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="info">{profile?.role}</Badge>
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-l border-gray-700 pl-2">
-                Operational Status: Active
+                Operational Status: {profile?.accountStatus || 'Verified'}
               </span>
             </div>
           </div>
@@ -181,15 +181,17 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-industrial-light flex items-center justify-center text-industrial-blue">
-                <Briefcase size={20} />
+            {employee && (
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-industrial-light flex items-center justify-center text-industrial-blue">
+                  <Briefcase size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-industrial-gray uppercase">Departmental Assignment</p>
+                  <p className="text-sm font-bold text-industrial-slate">{employee?.department || 'Not Assigned'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-industrial-gray uppercase">Departmental Assignment</p>
-                <p className="text-sm font-bold text-industrial-slate">{employee?.department || 'Not Assigned'}</p>
-              </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-industrial-light flex items-center justify-center text-industrial-blue">
@@ -197,28 +199,35 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-industrial-gray uppercase">Access Clearance</p>
-                <p className="text-sm font-bold text-industrial-slate">Standard Personnel {profile?.role === 'admin' ? '(Full Control)' : ''}</p>
+                <p className="text-sm font-bold text-industrial-slate">
+                  {profile?.role === 'admin' ? 'Administrator (Full System Control)' : 
+                   profile?.role === 'manager' ? 'Operations Manager' : 
+                   profile?.role === 'supervisor' ? 'Floor Supervisor' : 
+                   'Personnel Access'}
+                </p>
               </div>
             </div>
           </div>
         </Card>
 
-        <Card className="!p-0 overflow-hidden">
-           <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-            <History size={16} className="text-industrial-blue" />
-            <p className="text-[10px] font-bold text-industrial-gray uppercase tracking-widest">Recent Activity Timeline</p>
-          </div>
-          <div className="p-6">
-            <ActivityTimeline employeeId={employee?.employeeId} />
-          </div>
-        </Card>
+        {employee && (
+          <Card className="!p-0 overflow-hidden">
+             <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+              <History size={16} className="text-industrial-blue" />
+              <p className="text-[10px] font-bold text-industrial-gray uppercase tracking-widest">Recent Activity Timeline</p>
+            </div>
+            <div className="p-6">
+              <ActivityTimeline employeeId={employee?.employeeId} />
+            </div>
+          </Card>
+        )}
 
         <Card className="!p-0 overflow-hidden">
           <div className="p-4 bg-gray-50 border-b border-gray-100">
             <p className="text-[10px] font-bold text-industrial-gray uppercase tracking-widest">Account Security</p>
           </div>
           <div className="p-6 space-y-4">
-            <PasswordResetForm />
+            <PasswordResetForm role={profile?.role} />
             <div className="pt-4 border-t border-gray-100">
               <Button variant="outline" fullWidth className="!border-red-600 !text-red-600 hover:!bg-red-600 hover:!text-white flex items-center justify-center gap-2" onClick={handleLogout}>
                 <LogOut size={18} />
@@ -236,7 +245,8 @@ export default function Profile() {
   );
 }
 
-function PasswordResetForm() {
+function PasswordResetForm({ role }: { role: string }) {
+  const isAdmin = role === 'admin';
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -257,6 +267,21 @@ function PasswordResetForm() {
       setLoading(false);
     }
   };
+
+  if (isAdmin) {
+    return (
+      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+        <div className="flex items-center gap-2 text-amber-800 mb-2">
+          <Shield size={16} />
+          <p className="text-xs font-bold uppercase tracking-wider">Administrative Security</p>
+        </div>
+        <p className="text-[10px] text-amber-700 leading-relaxed font-medium">
+          Management of administrative credentials is restricted to the primary security console. 
+          Password updates for this role must be performed via the "Forgot Password" flow or by the System Owner.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleUpdate} className="space-y-4">

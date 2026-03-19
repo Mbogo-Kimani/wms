@@ -40,25 +40,25 @@ export default function AnalyticsDashboard() {
         <StatCard 
           label="Attendance Rate" 
           value={`${attendance?.attendanceRate || 0}%`} 
-          trend={{ value: '+2.1%', isUp: true }} 
+          trend={attendance?.trends?.attendance} 
           icon={<Users size={24} />} 
         />
         <StatCard 
           label="Late Frequency" 
           value={`${attendance?.lateRate || 0}%`} 
-          trend={{ value: '-1.5%', isUp: false }} 
+          trend={attendance?.trends?.late} 
           icon={<Clock size={24} />} 
         />
         <StatCard 
           label="Absence Index" 
           value={`${attendance?.absenceRate || 0}%`} 
-          trend={{ value: '+0.4%', isUp: true }} 
+          trend={attendance?.trends?.absence} 
           icon={<AlertTriangle size={24} />} 
         />
         <StatCard 
           label="Active Reliability" 
-          value="94.2%" 
-          trend={{ value: '+5%', isUp: true }} 
+          value={`${attendance?.avgReliability || 0}%`} 
+          trend={attendance?.trends?.reliability} 
           icon={<TrendingUp size={24} />} 
         />
       </div>

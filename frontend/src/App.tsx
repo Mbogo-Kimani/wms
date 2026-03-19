@@ -64,6 +64,7 @@ export default function App() {
             <Route path="holidays" element={<HolidayManagement />} />
             <Route path="policies" element={<WorkPolicyManagement />} />
             <Route path="schedules" element={<ScheduleManagement />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

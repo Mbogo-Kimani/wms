@@ -30,30 +30,31 @@ exports.signIn = async (req, res) => {
     const WorkPolicy = require('../models/WorkPolicy');
     const { isWeekend, isHoliday } = require('../utils/dateUtils');
     const now = dayjs();
-    const today = now.startOf('day').toDate();
-
     const policy = await WorkPolicy.findById(employee.workPolicy) || await WorkPolicy.findOne({ isDefault: true });
     const holidayToday = await isHoliday(now.toDate());
     const weekendToday = await isWeekend(now.toDate());
     const dayName = now.format('dddd');
+    const todayStr = now.format('YYYY-MM-DD');
 
     if (employee.religiousRestDay === dayName && !req.body.religiousOverride) {
       return res.status(403).json({ 
         success: false,
-        message: `Attendance is restricted. Today is your religious rest day (${dayName}).`,
+        message: `Attendance is restricted. Today is your religious rest day (${dayName}). (Override required)`,
         requiresOverride: true 
       });
     }
 
     if (weekendToday && !employee.weekendWorker) {
-      return res.sendError('You are not scheduled for weekend work. Attendance restricted.', 403);
+      return res.sendError(`You are not scheduled for weekend work. Attendance restricted. (Today: ${dayName})`, 403);
     }
 
     if (holidayToday && !employee.holidayWorker) {
-      return res.sendError('Attendance is restricted on public holidays for your profile.', 403);
+      return res.sendError(`Attendance is restricted on public holidays for your profile. (Date: ${now.format('YYYY-MM-DD')})`, 403);
     }
 
     let status = 'present';
+    let workDate = todayStr;
+
     if (policy) {
       let startTime, endTime;
       if (holidayToday) {
@@ -62,22 +63,48 @@ exports.signIn = async (req, res) => {
       } else if (weekendToday) {
         startTime = policy.weekendLoginStart;
         endTime = policy.weekendLoginEnd;
+      } else if (shift && shift.startTime && shift.endTime) {
+        // Dynamic window based on actual shift!
+        try {
+          startTime = dayjs(`2000-01-01 ${shift.startTime}`).subtract(1, 'hour').format('HH:mm');
+          endTime = shift.endTime;
+        } catch (e) {
+          startTime = policy.regularLoginStart;
+          endTime = policy.regularLoginEnd;
+        }
       } else {
         startTime = policy.regularLoginStart;
         endTime = policy.regularLoginEnd;
       }
 
-      const todayStr = now.format('YYYY-MM-DD');
-      const startLimit = dayjs(`${todayStr} ${startTime}`);
-      const endLimit = dayjs(`${todayStr} ${endTime}`);
+      // Window Today
+      let startToday = dayjs(`${todayStr} ${startTime}`);
+      let endToday = dayjs(`${todayStr} ${endTime}`);
+      if (endToday.isBefore(startToday)) endToday = endToday.add(1, 'day');
 
-      if (now.isBefore(startLimit)) {
-        return res.sendError(`Login window opens at ${startTime}. Please wait.`, 403);
+      // Window Yesterday
+      let startYesterday = startToday.subtract(1, 'day');
+      let endYesterday = endToday.subtract(1, 'day');
+
+      const isWithinToday = (now.isSame(startToday) || now.isAfter(startToday)) && now.isBefore(endToday);
+      const isWithinYesterday = (now.isSame(startYesterday) || now.isAfter(startYesterday)) && now.isBefore(endYesterday);
+
+      if (!isWithinToday && !isWithinYesterday) {
+        return res.sendError(`Login window is currently closed. (Shift: ${shift?.name || 'Policy'} ${startTime}-${endTime}). Current time: ${now.format('HH:mm')}`, 403);
       }
-      if (now.isAfter(endLimit)) {
-         return res.sendError(`Login window for this shift closed at ${endTime}.`, 403);
+
+      // Determine Primary Window for Lateness and Work Date
+      const primaryStartLimit = isWithinToday ? startToday : startYesterday;
+      workDate = dayjs(primaryStartLimit).format('YYYY-MM-DD'); // Use string format for consistent UTC-midnight interpretation
+
+      // Check for lateness
+      const gracePeriod = policy.gracePeriodMinutes || 15;
+      let latenessBase = primaryStartLimit;
+      if (shift && shift.startTime && !holidayToday && !weekendToday) {
+        latenessBase = dayjs(primaryStartLimit).add(1, 'hour'); 
       }
-      if (now.isAfter(startLimit.add(policy.gracePeriodMinutes || 15, 'minute'))) {
+
+      if (now.isAfter(latenessBase.add(gracePeriod, 'minute'))) {
         status = 'late';
       }
     }
@@ -85,13 +112,31 @@ exports.signIn = async (req, res) => {
     if (holidayToday) status = 'holiday_work';
     else if (weekendToday) status = 'weekend_work';
 
-    const existing = await Attendance.findOne({ employeeId: employee._id, date: today });
-    if (existing) return res.sendError('Already signed in today.', 400);
+    const existing = await Attendance.findOne({ employeeId: employee._id, date: workDate });
+    
+    if (existing) {
+      if (existing.status === 'absent') {
+        // Overwrite the auto-generated absent record
+        existing.signInTime = now.toDate();
+        existing.signInLocation = { lat, lng };
+        existing.signInMethod = req.body.method || 'mobile';
+        existing.status = status;
+        existing.isHolidayWork = holidayToday;
+        existing.isWeekendWork = weekendToday;
+        existing.religiousOverride = !!req.body.religiousOverride;
+        await existing.save();
+        
+        await logAction(req, 'attendance_signin_update', 'Attendance', existing._id, { method: req.body.method, wasAbsent: true });
+        return res.sendSuccess(existing, 'Signed in successfully (Updated from absent)');
+      } else {
+        return res.sendError('Already signed in for this work day.', 400);
+      }
+    }
 
     const attendance = await Attendance.create({
       employeeId: employee._id,
       shiftId: shift._id,
-      date: today,
+      date: workDate,
       signInTime: now.toDate(),
       signInLocation: { lat, lng },
       signInMethod: req.body.method || 'mobile',
@@ -113,10 +158,18 @@ exports.signOut = async (req, res) => {
     const { lat, lng } = req.body;
     const employee = await Employee.findOne({ userId: req.user.id }).populate('shiftId');
     if (!employee) return res.sendError('Employee profile not found', 404);
-    const today = dayjs().startOf('day').toDate();
+    const now = dayjs();
+    const todayStr = now.format('YYYY-MM-DD');
+    const yesterdayStr = now.subtract(1, 'day').format('YYYY-MM-DD');
 
-    const attendance = await Attendance.findOne({ employeeId: employee._id, date: today });
-    if (!attendance) return res.sendError('No sign-in record found for today.', 404);
+    // Look for active attendance record (today or yesterday for night shifts)
+    const attendance = await Attendance.findOne({ 
+      employeeId: employee._id, 
+      date: { $in: [todayStr, yesterdayStr] },
+      signOutTime: { $exists: false }
+    }).sort({ date: -1 });
+
+    if (!attendance) return res.sendError('No active sign-in record found for today or yesterday.', 404);
 
     // Verification bypassed as requested
     // const shift = employee.shiftId;
@@ -130,13 +183,20 @@ exports.signOut = async (req, res) => {
     if (attendance.signOutTime) return res.sendError('Already signed out.', 400);
 
     const shift = employee.shiftId;
-    const now = dayjs();
     let overtimeMinutes = 0;
 
     if (shift && shift.endTime) {
       try {
         const [endHour, endMin] = shift.endTime.split(':');
-        const shiftEndTime = dayjs(today).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
+        const [startHour, startMin] = (shift.startTime || "00:00").split(':');
+        
+        let shiftEndTime = dayjs(attendance.date).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
+        
+        // If end time is before start time, it crosses midnight
+        if (parseInt(endHour) < parseInt(startHour)) {
+          shiftEndTime = shiftEndTime.add(1, 'day');
+        }
+
         const overtimeThreshold = shiftEndTime.add(shift.overtimeAfterMinutes || 0, 'minute');
 
         if (now.isAfter(overtimeThreshold)) {
@@ -164,8 +224,25 @@ exports.getTodayAttendance = async (req, res) => {
     const employee = await Employee.findOne({ userId: req.user.id });
     if (!employee) return res.sendSuccess({});
     
-    const today = dayjs().startOf('day').toDate();
-    const attendance = await Attendance.findOne({ employeeId: employee._id, date: today });
+    const now = dayjs();
+    const todayStr = now.format('YYYY-MM-DD');
+    const yesterdayStr = now.subtract(1, 'day').format('YYYY-MM-DD');
+
+    // 1. Prioritize an active session (today or yesterday)
+    let attendance = await Attendance.findOne({ 
+      employeeId: employee._id, 
+      date: { $in: [todayStr, yesterdayStr] },
+      signOutTime: { $exists: false }
+    }).sort({ date: -1 });
+
+    // 2. If no active session, look for ANY record on TODAY specifically
+    if (!attendance) {
+      attendance = await Attendance.findOne({ 
+        employeeId: employee._id, 
+        date: todayStr 
+      });
+    }
+
     res.sendSuccess(attendance || {});
   } catch (error) {
     res.sendError(error.message, 500);

@@ -5,6 +5,8 @@ import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
 import Card from '../components/Card';
 import { Users, Clock, Calendar, AlertTriangle, UserCheck } from 'lucide-react';
+import QuickClock from '../components/QuickClock';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboard() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -42,6 +44,14 @@ export default function AdminDashboard() {
     },
     enabled: role === 'admin' || role === 'manager'
   });
+  
+  const { data: trendData } = useQuery({
+    queryKey: ['attendanceTrend'],
+    queryFn: async () => {
+      const res = await api.get('/analytics/attendance-trend');
+      return res.data;
+    }
+  });
 
   if (isLoading) return <div className="p-8 text-center text-industrial-gray font-medium">Loading analytics...</div>;
 
@@ -51,6 +61,8 @@ export default function AdminDashboard() {
         title="Operations Overview" 
         subtitle="Real-time workforce distribution and attendance metrics"
       />
+
+      <QuickClock />
 
       {/* Primary Analytics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,8 +99,31 @@ export default function AdminDashboard() {
         {/* Recent Activity or Chart Placeholder */}
         <Card className="lg:col-span-2">
           <h2 className="text-xl font-bold text-industrial-slate mb-6">Attendance Density</h2>
-          <div className="h-64 bg-gray-50 rounded-xl border border-dashed border-gray-300 flex items-center justify-center text-industrial-gray italic text-sm">
-            Activity heat map visualization placeholder
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                />
+                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: '20px' }} />
+                <Bar dataKey="present" name="Present/Late" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="absent" name="Absent" fill="#f97316" radius={[4, 4, 0, 0]} barSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
 

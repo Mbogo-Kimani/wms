@@ -54,14 +54,39 @@ exports.createEmployee = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { name, email, password, department, position, shiftId, dateHired, phone, religion, religiousRestDay, weekendWorker, holidayWorker } = req.body;
+    let { name, email, password, department, position, shiftId, dateHired, phone, religion, religiousRestDay, weekendWorker, holidayWorker } = req.body;
+    email = email.toLowerCase().trim();
+    
+    // Check for existing User to prevent E11000 duplicate key error
+    const existingUser = await User.findOne({ email }).session(session);
+    if (existingUser) {
+        const existingEmployee = await Employee.findOne({ userId: existingUser._id }).session(session);
+        if (existingEmployee) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.sendError('An employee profile already exists for this email address.', 400);
+        }
+        
+        if (existingUser.accountStatus === 'pending') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.sendError('This user has a pending registration. Please approve them in the "Pending Registrations" section instead.', 400);
+        }
 
-    // 1. Create User account
+        // If it's a verified orphan (no profile), clean it up within the transaction
+        await User.findByIdAndDelete(existingUser._id).session(session);
+    }
+
+    // 1. Create User account (Determine role from position)
+    let role = 'worker';
+    if (position === 'Supervisor') role = 'supervisor';
+    if (position === 'Manager') role = 'manager';
+
     const user = new User({
       name,
       email,
-      password: password || 'Wms@2026',
-      role: 'worker',
+      password: (password && password.trim() !== "") ? password : 'Wms@2026',
+      role,
       accountStatus: 'verified' // Direct verification
     });
     await user.save({ session });
@@ -126,16 +151,21 @@ exports.deleteEmployee = async (req, res, next) => {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.sendError('Employee not found', 404);
 
-    // 1. Delete associated User if exists
+    // 1. Delete associated User if exists (By ID and Email as fallback)
     if (employee.userId) {
       await User.findByIdAndDelete(employee.userId);
     }
+    // Also delete by email to catch orphans with broken ID links
+    await User.findOneAndDelete({ email: employee.email });
 
     // 2. Delete Leave Balances
     await LeaveBalance.deleteMany({ employeeId: employee._id });
 
     // 3. Delete Attendance records
     await Attendance.deleteMany({ employeeId: employee._id });
+    
+    // 3b. Delete Leave requests
+    await LeaveRequest.deleteMany({ employeeId: employee._id });
 
     // 4. Delete Employee profile
     await Employee.findByIdAndDelete(req.params.id);

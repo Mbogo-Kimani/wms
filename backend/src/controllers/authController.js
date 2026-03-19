@@ -13,7 +13,8 @@ const generateToken = (user) => {
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, religion, religiousRestDay } = req.body;
+    let { name, email, password, religion, religiousRestDay } = req.body;
+    email = email.toLowerCase().trim();
     
     // 1. Check for existing User
     const existingUser = await User.findOne({ email });
@@ -47,7 +48,8 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email.toLowerCase().trim();
     const user = await User.findOne({ email });
     
     if (!user || !(await user.matchPassword(password))) {
@@ -65,8 +67,8 @@ exports.login = async (req, res, next) => {
     let employee;
     if (user.accountStatus === 'verified') {
         employee = await Employee.findOne({ userId: user._id });
-        if (user.role === 'worker' && !employee) {
-            return res.sendError('Access denied: Employee profile not found.', 403);
+        if (user.role !== 'admin' && !employee) {
+            return res.sendError('Access denied: Physical employee profile not found. Please contact an administrator.', 403);
         }
     }
 
@@ -172,6 +174,19 @@ exports.forgotPassword = async (req, res, next) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.sendError('No account found with this email', 404);
+
+    // 1. Block Suspended or Pending accounts
+    if (user.accountStatus !== 'verified') {
+        return res.sendError('This account is not authorized for password reset. Please contact an administrator.', 403);
+    }
+
+    // 2. Block Orphaned accounts (Non-admins must have an employee profile)
+    if (user.role !== 'admin') {
+        const employee = await Employee.findOne({ userId: user._id });
+        if (!employee) {
+            return res.sendError('Associated staff profile not found. Access denied.', 403);
+        }
+    }
 
     const token = require('crypto').randomBytes(32).toString('hex');
     user.resetPasswordToken = token;

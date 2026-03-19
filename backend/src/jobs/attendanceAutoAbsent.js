@@ -34,14 +34,14 @@ cron.schedule('59 23 * * *', async () => {
 
       const attendance = await Attendance.findOne({
         employeeId: employee._id,
-        date: today
+        date: new Date(today)
       });
 
       if (!attendance) {
         await Attendance.create({
           employeeId: employee._id,
           shiftId: employee.shiftId,
-          date: today,
+          date: new Date(today),
           status: 'absent',
           signInMethod: 'manual'
         });

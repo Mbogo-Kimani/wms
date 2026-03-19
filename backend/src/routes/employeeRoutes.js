@@ -9,13 +9,13 @@ router.use(protect);
 
 router.route('/')
   .get(getEmployees)
-  .post(authorize('admin', 'manager'), validate(employeeSchema), createEmployee);
+  .post(authorize('admin', 'manager', 'supervisor'), validate(employeeSchema), createEmployee);
 
 router.get('/:id/activity', getEmployeeActivity);
 
 router.route('/:id')
   .get(getEmployee)
-  .patch(authorize('admin', 'manager'), validate(employeeSchema), updateEmployee)
+  .patch(authorize('admin', 'manager', 'supervisor'), validate(employeeSchema), updateEmployee)
   .delete(authorize('admin', 'manager'), deleteEmployee);
 
 module.exports = router;

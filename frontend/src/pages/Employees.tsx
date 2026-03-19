@@ -8,12 +8,15 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Input from '../components/Input';
 import { UserPlus, Trash2, Edit, Search, X, Eye } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const DEPARTMENTS = ['Operations', 'Logistics', 'Security', 'HR', 'IT', 'Maintenance', 'Administration', 'Quality Control'];
 const POSITIONS = ['Standard', 'Supervisor', 'Lead', 'Manager', 'Technician', 'Specialist', 'Intern'];
 
 export default function Employees() {
   const queryClient = useQueryClient();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const role = user.role;
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
@@ -35,12 +38,22 @@ export default function Employees() {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       setIsModalOpen(false);
       setEditingEmployee(null);
+      toast.success(editingEmployee ? 'Staff profile updated' : 'Personnel registered successfully');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Access Forbidden: Only Admins or Managers can perform this action');
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/employees/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('Employee record removed');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Access Denied: Insufficient permissions to delete records');
+    }
   });
 
   const handleEdit = (emp: any) => {
@@ -123,12 +136,14 @@ export default function Employees() {
                   >
                     <Edit size={18} />
                   </button>
-                  <button 
-                    onClick={() => { if(confirm('Are you sure you want to remove this employee?')) deleteMutation.mutate(emp._id) }}
-                    className="p-2 text-industrial-gray hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {(role === 'admin' || role === 'manager') && (
+                    <button 
+                      onClick={() => { if(confirm('Are you sure you want to remove this employee?')) deleteMutation.mutate(emp._id) }}
+                      className="p-2 text-industrial-gray hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -296,8 +311,8 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <Card className="w-full max-w-lg animate-in zoom-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+      <Card className="w-full max-w-lg animate-in zoom-in duration-300 max-h-[95vh] flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black text-industrial-slate">
             {initialData ? 'Update Staff Member' : 'Register New Personnel'}
@@ -307,7 +322,7 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2 custom-scrollbar p-6 pt-0">
           <Input 
             label="Full Name" 
             placeholder="John Doe" 
@@ -332,7 +347,7 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="space-y-2">
                 <label className="text-[10px] font-bold text-industrial-gray uppercase">Department</label>
                 <select 
@@ -351,7 +366,7 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
                 />
              </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
                 <label className="text-[10px] font-bold text-industrial-gray uppercase">Position</label>
                 <select 
@@ -376,7 +391,7 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <Input 
                label="Phone Number" 
                placeholder="+254..." 
@@ -391,7 +406,7 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
              />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div className="space-y-2">
                 <label className="text-[10px] font-bold text-industrial-gray uppercase">Rest Day</label>
                 <select 
@@ -410,23 +425,23 @@ function EmployeeModal({ isOpen, onClose, onSave, initialData, isLoading }: any)
                 </select>
             </div>
             <div className="flex flex-col gap-2 pb-2">
-               <label className="flex items-center gap-2 cursor-pointer">
+               <label className="flex items-center gap-2 cursor-pointer text-sm">
                   <input 
                     type="checkbox" 
                     checked={formData.weekendWorker} 
                     onChange={(e) => setFormData({...formData, weekendWorker: e.target.checked})}
                     className="rounded border-gray-300 text-industrial-blue focus:ring-industrial-blue"
                   />
-                  <span className="text-xs font-bold text-industrial-slate">Weekend Worker</span>
+                  <span className="font-bold text-industrial-slate">Weekend Worker</span>
                </label>
-               <label className="flex items-center gap-2 cursor-pointer">
+               <label className="flex items-center gap-2 cursor-pointer text-sm">
                   <input 
                     type="checkbox" 
                     checked={formData.holidayWorker} 
                     onChange={(e) => setFormData({...formData, holidayWorker: e.target.checked})}
                     className="rounded border-gray-300 text-industrial-blue focus:ring-industrial-blue"
                   />
-                  <span className="text-xs font-bold text-industrial-slate">Holiday Worker</span>
+                  <span className="font-bold text-industrial-slate">Holiday Worker</span>
                </label>
             </div>
           </div>
