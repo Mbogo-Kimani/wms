@@ -8,7 +8,7 @@ const { shiftSchema } = require('../utils/validation/shiftSchemas');
 router.use(protect);
 
 router.route('/')
-  .get(getShifts)
+  .get(authorize('admin', 'manager', 'supervisor'), getShifts)
   .post(authorize('admin', 'manager'), validate(shiftSchema), createShift);
 
 router.route('/:id')

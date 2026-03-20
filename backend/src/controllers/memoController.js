@@ -38,3 +38,11 @@ exports.deleteMemo = async (req, res, next) => {
     res.sendSuccess(null, 'Memo deleted');
   } catch (err) { next(err); }
 };
+
+exports.updateMemo = async (req, res, next) => {
+  try {
+    const memo = await Memo.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!memo) return res.sendError('Memo not found', 404);
+    res.sendSuccess(memo, 'Memo updated');
+  } catch (err) { next(err); }
+};

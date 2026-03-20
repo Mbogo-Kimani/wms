@@ -20,7 +20,6 @@ const onboardingRoutes = require('./routes/onboardingRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
 // Cron Jobs
-require('./jobs/attendanceCron');
 require('./jobs/attendanceAutoAbsent');
 require('./jobs/leaveYearlyReset');
 require('./jobs/antiSleep');

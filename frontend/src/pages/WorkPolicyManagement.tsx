@@ -178,7 +178,12 @@ function PolicyModal({ onClose, onSave, initialData, isLoading }: any) {
               <p className="text-[10px] font-bold text-industrial-gray uppercase tracking-widest">Regular Days Login Window</p>
               <div className="grid grid-cols-2 gap-4">
                 <Input type="time" label="Start" value={formData.regularLoginStart} onChange={e => setFormData({...formData, regularLoginStart: e.target.value})} />
-                <Input type="time" label="End" value={formData.regularLoginEnd} onChange={e => setFormData({...formData, regularLoginEnd: e.target.value})} />
+                <div className="relative">
+                  <Input type="time" label="End" value={formData.regularLoginEnd} onChange={e => setFormData({...formData, regularLoginEnd: e.target.value})} />
+                  {formData.regularLoginEnd < formData.regularLoginStart && formData.regularLoginEnd !== '' && (
+                    <span className="absolute -bottom-5 right-0 text-[9px] font-bold text-industrial-blue animate-pulse">Crosses Midnight (Next Day)</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -186,7 +191,12 @@ function PolicyModal({ onClose, onSave, initialData, isLoading }: any) {
               <p className="text-[10px] font-bold text-orange-700 uppercase tracking-widest">Holidays Login Window</p>
               <div className="grid grid-cols-2 gap-4">
                 <Input type="time" label="Start" value={formData.holidayLoginStart} onChange={e => setFormData({...formData, holidayLoginStart: e.target.value})} />
-                <Input type="time" label="End" value={formData.holidayLoginEnd} onChange={e => setFormData({...formData, holidayLoginEnd: e.target.value})} />
+                <div className="relative">
+                  <Input type="time" label="End" value={formData.holidayLoginEnd} onChange={e => setFormData({...formData, holidayLoginEnd: e.target.value})} />
+                  {formData.holidayLoginEnd < formData.holidayLoginStart && formData.holidayLoginEnd !== '' && (
+                    <span className="absolute -bottom-5 right-0 text-[10px] font-bold text-orange-600">Crosses Midnight</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -194,7 +204,12 @@ function PolicyModal({ onClose, onSave, initialData, isLoading }: any) {
               <p className="text-[10px] font-bold text-purple-700 uppercase tracking-widest">Weekends Login Window</p>
               <div className="grid grid-cols-2 gap-4">
                 <Input type="time" label="Start" value={formData.weekendLoginStart} onChange={e => setFormData({...formData, weekendLoginStart: e.target.value})} />
-                <Input type="time" label="End" value={formData.weekendLoginEnd} onChange={e => setFormData({...formData, weekendLoginEnd: e.target.value})} />
+                <div className="relative">
+                  <Input type="time" label="End" value={formData.weekendLoginEnd} onChange={e => setFormData({...formData, weekendLoginEnd: e.target.value})} />
+                  {formData.weekendLoginEnd < formData.weekendLoginStart && formData.weekendLoginEnd !== '' && (
+                    <span className="absolute -bottom-5 right-0 text-[10px] font-bold text-purple-600">Crosses Midnight</span>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -10,14 +10,22 @@ import dayjs from 'dayjs';
 export default function AdminAttendance() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [statusFilter, setStatusFilter] = useState('all'); 
+  const [shiftTypeFilter, setShiftTypeFilter] = useState('all');
 
   const { data: attendance, isLoading } = useQuery({
-    queryKey: ['adminAttendance', selectedDate],
+    queryKey: ['adminAttendance', selectedDate, statusFilter, shiftTypeFilter],
     queryFn: async () => {
-      const res = await api.get('/attendance/all-history'); 
+      const params = new URLSearchParams();
+      if (selectedDate && statusFilter !== 'ongoing') params.append('date', selectedDate);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (shiftTypeFilter !== 'all') params.append('shiftType', shiftTypeFilter);
+      
+      const res = await api.get(`/attendance/all-history?${params.toString()}`); 
       return res.data as any;
     }
   });
+
 
   const filtered = attendance?.filter((record: any) => 
     record.employeeId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,25 +39,56 @@ export default function AdminAttendance() {
         subtitle="Live verification of workforce presence and shift compliance"
       />
 
-      <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input 
-            type="text"
-            placeholder="Search by name or employee ID..."
-            className="input-field pl-11 w-full"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex bg-gray-100 p-1 rounded-lg">
+          <button 
+            onClick={() => { setStatusFilter('all'); setShiftTypeFilter('all'); }}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${statusFilter === 'all' && shiftTypeFilter === 'all' ? 'bg-white text-industrial-blue shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
+          >
+            All History
+          </button>
+          <button 
+            onClick={() => { setStatusFilter('ongoing'); setShiftTypeFilter('all'); }}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${statusFilter === 'ongoing' ? 'bg-white text-industrial-blue shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
+          >
+            Ongoing
+          </button>
+          <button 
+            onClick={() => { setStatusFilter('all'); setShiftTypeFilter('day'); }}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${shiftTypeFilter === 'day' ? 'bg-green-600 text-white shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
+          >
+            Day Shifts
+          </button>
+          <button 
+            onClick={() => { setStatusFilter('all'); setShiftTypeFilter('night'); }}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${shiftTypeFilter === 'night' ? 'bg-industrial-slate text-white shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
+          >
+            Night Shifts
+          </button>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
-           <Calendar size={18} className="ml-2 text-industrial-gray" />
-           <input 
-             type="date" 
-             className="border-none focus:ring-0 text-sm font-bold text-industrial-slate"
-             value={selectedDate}
-             onChange={(e) => setSelectedDate(e.target.value)}
-           />
+
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="text"
+              placeholder="Search worker..."
+              className="input-field pl-10 py-1.5 text-sm w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {statusFilter !== 'ongoing' && (
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+               <Calendar size={16} className="text-industrial-gray" />
+               <input 
+                 type="date" 
+                 className="bg-transparent border-none focus:ring-0 text-xs font-bold text-industrial-slate p-0"
+                 value={selectedDate}
+                 onChange={(e) => setSelectedDate(e.target.value)}
+               />
+            </div>
+          )}
         </div>
       </div>
 

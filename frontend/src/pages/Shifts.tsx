@@ -11,6 +11,9 @@ export default function Shifts() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<any>(null);
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = ['admin', 'manager'].includes(user.role);
 
   const { data: shifts, isLoading } = useQuery({
     queryKey: ['shifts'],
@@ -27,7 +30,7 @@ export default function Shifts() {
 
   const upsertMutation = useMutation({
     mutationFn: (data: any) => editingShift 
-      ? api.put(`/shifts/${editingShift._id}`, data)
+      ? api.patch(`/shifts/${editingShift._id}`, data)
       : api.post('/shifts', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
@@ -46,12 +49,12 @@ export default function Shifts() {
       <PageHeader 
         title="Shift Schedules" 
         subtitle="Configure operational hours and geofencing parameters"
-        actions={
+        actions={isAdmin && (
           <Button variant="primary" className="flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
             <Plus size={18} />
             Create New Shift
           </Button>
-        }
+        )}
       />
 
       {isLoading ? (
@@ -68,20 +71,22 @@ export default function Shifts() {
                     {shift.days?.join(', ') || 'All Week'}
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleEdit(shift)}
-                    className="p-1.5 text-industrial-gray hover:text-industrial-blue bg-industrial-light rounded-md"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={() => { if(confirm('Delete shift?')) deleteMutation.mutate(shift._id) }}
-                    className="p-1.5 text-industrial-gray hover:text-red-600 bg-industrial-light rounded-md"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => handleEdit(shift)}
+                      className="p-1.5 text-industrial-gray hover:text-industrial-blue bg-industrial-light rounded-md"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => { if(confirm('Delete shift?')) deleteMutation.mutate(shift._id) }}
+                      className="p-1.5 text-industrial-gray hover:text-red-600 bg-industrial-light rounded-md"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -116,15 +121,17 @@ export default function Shifts() {
             </Card>
           ))}
           
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="h-full min-h-[200px] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center p-6 text-industrial-gray hover:border-industrial-blue hover:text-industrial-blue hover:bg-industrial-blue/5 transition-all group"
-          >
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center mb-3 group-hover:border-industrial-blue">
-              <Plus size={24} />
-            </div>
-            <span className="font-bold">Add Another Shift</span>
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="h-full min-h-[200px] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center p-6 text-industrial-gray hover:border-industrial-blue hover:text-industrial-blue hover:bg-industrial-blue/5 transition-all group"
+            >
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center mb-3 group-hover:border-industrial-blue">
+                <Plus size={24} />
+              </div>
+              <span className="font-bold">Add Another Shift</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -142,14 +149,18 @@ export default function Shifts() {
 }
 
 function ShiftModal({ onClose, onSave, initialData, isLoading }: any) {
-  const [formData, setFormData] = useState(initialData || {
-    name: '',
-    startTime: '08:00',
-    endTime: '17:00',
-    gracePeriodMinutes: 15,
-    lateAfterMinutes: 60,
-    overtimeAfterMinutes: 0,
-    location: { lat: 0, lng: 0, radius: 100 }
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    startTime: initialData?.startTime || '08:00',
+    endTime: initialData?.endTime || '17:00',
+    gracePeriodMinutes: initialData?.gracePeriodMinutes ?? 15,
+    lateAfterMinutes: initialData?.lateAfterMinutes ?? 60,
+    overtimeAfterMinutes: initialData?.overtimeAfterMinutes ?? 0,
+    location: {
+      lat: initialData?.location?.lat ?? 0,
+      lng: initialData?.location?.lng ?? 0,
+      radius: initialData?.location?.radius ?? 100
+    }
   });
 
   return (
@@ -206,8 +217,8 @@ function ShiftModal({ onClose, onSave, initialData, isLoading }: any) {
               <input 
                 type="number" 
                 className="input-field" 
-                value={formData.gracePeriodMinutes}
-                onChange={e => setFormData({ ...formData, gracePeriodMinutes: parseInt(e.target.value) })}
+                value={formData.gracePeriodMinutes ?? ''}
+                onChange={e => setFormData({ ...formData, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div className="space-y-2">
@@ -215,18 +226,18 @@ function ShiftModal({ onClose, onSave, initialData, isLoading }: any) {
               <input 
                 type="number" 
                 className="input-field" 
-                value={formData.lateAfterMinutes}
-                onChange={e => setFormData({ ...formData, lateAfterMinutes: parseInt(e.target.value) })}
+                value={formData.lateAfterMinutes ?? ''}
+                onChange={e => setFormData({ ...formData, lateAfterMinutes: parseInt(e.target.value) || 0 })}
               />
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-100">
              <p className="text-[10px] font-bold text-industrial-gray uppercase mb-3">Geofencing Configuration</p>
              <div className="grid grid-cols-3 gap-3">
-               <input type="number" step="any" placeholder="Lat" className="input-field text-xs" value={formData.location.lat} onChange={e => setFormData({ ...formData, location: { ...formData.location, lat: parseFloat(e.target.value) }})} />
-               <input type="number" step="any" placeholder="Lng" className="input-field text-xs" value={formData.location.lng} onChange={e => setFormData({ ...formData, location: { ...formData.location, lng: parseFloat(e.target.value) }})} />
-               <input type="number" placeholder="Radius (m)" className="input-field text-xs" value={formData.location.radius} onChange={e => setFormData({ ...formData, location: { ...formData.location, radius: parseInt(e.target.value) }})} />
+               <input type="number" step="any" placeholder="Lat" className="input-field text-xs" value={formData.location.lat ?? ''} onChange={e => setFormData({ ...formData, location: { ...formData.location, lat: parseFloat(e.target.value) || 0 }})} />
+               <input type="number" step="any" placeholder="Lng" className="input-field text-xs" value={formData.location.lng ?? ''} onChange={e => setFormData({ ...formData, location: { ...formData.location, lng: parseFloat(e.target.value) || 0 }})} />
+               <input type="number" placeholder="Radius (m)" className="input-field text-xs" value={formData.location.radius ?? ''} onChange={e => setFormData({ ...formData, location: { ...formData.location, radius: parseInt(e.target.value) || 0 }})} />
              </div>
           </div>
 

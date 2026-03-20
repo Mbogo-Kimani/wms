@@ -79,8 +79,8 @@ exports.signIn = async (req, res) => {
       }
 
       // Window Today
-      let startToday = dayjs(`${todayStr} ${startTime}`);
-      let endToday = dayjs(`${todayStr} ${endTime}`);
+      let startToday = dayjs.tz(`${todayStr} ${startTime}`, companyTz);
+      let endToday = dayjs.tz(`${todayStr} ${endTime}`, companyTz);
       if (endToday.isBefore(startToday)) endToday = endToday.add(1, 'day');
 
       // Window Yesterday
@@ -193,7 +193,7 @@ exports.signOut = async (req, res) => {
         const [endHour, endMin] = shift.endTime.split(':');
         const [startHour, startMin] = (shift.startTime || "00:00").split(':');
         
-        let shiftEndTime = dayjs(attendance.date).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
+        let shiftEndTime = dayjs.tz(attendance.date, companyTz).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
         
         // If end time is before start time, it crosses midnight
         if (parseInt(endHour) < parseInt(startHour)) {
@@ -272,11 +272,47 @@ exports.getWorkerHistory = async (req, res) => {
 
 exports.getAllHistory = async (req, res) => {
   try {
-    const history = await Attendance.find()
+    const { date, status, shiftType } = req.query;
+    let query = {};
+
+    if (date) {
+      query.date = date;
+    }
+
+    if (status === 'ongoing') {
+      query.signOutTime = { $exists: false };
+      // Ongoing usually implies recent, so we check today and yesterday
+      const settings = await CompanySettings.findOne();
+      const companyTz = settings?.timezone || 'UTC';
+      const now = dayjs().tz(companyTz);
+      const today = now.format('YYYY-MM-DD');
+      const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+      query.date = { $in: [today, yesterday] };
+    } else if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    let history = await Attendance.find(query)
       .populate('employeeId', 'name employeeId department')
       .populate('shiftId', 'name startTime endTime')
-      .sort({ date: -1 })
-      .limit(100);
+      .sort({ date: -1, signInTime: -1 });
+
+    // Optional Shift Type filtering (Post-query for simplicity)
+    if (shiftType === 'night') {
+      history = history.filter(h => {
+        if (!h.shiftId) return false;
+        const [startH] = h.shiftId.startTime.split(':');
+        const [endH] = h.shiftId.endTime.split(':');
+        return parseInt(endH) < parseInt(startH);
+      });
+    } else if (shiftType === 'day') {
+      history = history.filter(h => {
+        if (!h.shiftId) return true; // Default to day?
+        const [startH] = h.shiftId.startTime.split(':');
+        const [endH] = h.shiftId.endTime.split(':');
+        return parseInt(endH) >= parseInt(startH);
+      });
+    }
 
     res.sendSuccess(history);
   } catch (error) {
