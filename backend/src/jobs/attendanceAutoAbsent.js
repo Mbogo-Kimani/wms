@@ -1,17 +1,25 @@
 const cron = require('node-cron');
+const dayjs = require('dayjs');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
-const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const CompanySettings = require('../models/CompanySettings');
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
-// Run every day at 11:59 PM
-cron.schedule('59 23 * * *', async () => {
+// Run every day at 23:59 Nairobi time (20:59 UTC)
+cron.schedule('59 20 * * *', async () => {
   console.log('Running Auto-Absence Job...');
   try {
-    const today = dayjs().format('YYYY-MM-DD');
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
+    const today = now.format('YYYY-MM-DD');
     const { isWeekend, isHoliday } = require('../utils/dateUtils');
-    const holidayToday = await isHoliday(today);
-    const weekendToday = await isWeekend(today);
-    const dayName = dayjs(today).format('dddd');
+    const holidayToday = await isHoliday(now);
+    const weekendToday = await isWeekend(now);
+    const dayName = now.format('dddd');
 
     const employees = await Employee.find({ status: 'active' });
 

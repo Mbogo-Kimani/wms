@@ -10,7 +10,8 @@ const companySettingsSchema = new mongoose.Schema({
     type: [String], 
     default: ['Saturday', 'Sunday'],
     enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-  }
+  },
+  timezone: { type: String, default: 'UTC' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('CompanySettings', companySettingsSchema);

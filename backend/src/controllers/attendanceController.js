@@ -4,6 +4,10 @@ const Attendance = require('../models/Attendance');
 const CompanySettings = require('../models/CompanySettings');
 const { getDistanceFromLatLonInMeters } = require('../utils/geoUtils');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
 const { isHoliday } = require('../utils/dateUtils');
 const logAction = require('../utils/auditLogger');
 
@@ -22,17 +26,14 @@ exports.signIn = async (req, res) => {
 
     const shift = employee.shiftId;
     const settings = await CompanySettings.findOne();
-    let locationVerified = false;
-
-    // Broaden verification: Accept from any location/WiFi
-    locationVerified = true;
-
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
+    
     const WorkPolicy = require('../models/WorkPolicy');
     const { isWeekend, isHoliday } = require('../utils/dateUtils');
-    const now = dayjs();
     const policy = await WorkPolicy.findById(employee.workPolicy) || await WorkPolicy.findOne({ isDefault: true });
-    const holidayToday = await isHoliday(now.toDate());
-    const weekendToday = await isWeekend(now.toDate());
+    const holidayToday = await isHoliday(now);
+    const weekendToday = await isWeekend(now);
     const dayName = now.format('dddd');
     const todayStr = now.format('YYYY-MM-DD');
 
@@ -158,7 +159,9 @@ exports.signOut = async (req, res) => {
     const { lat, lng } = req.body;
     const employee = await Employee.findOne({ userId: req.user.id }).populate('shiftId');
     if (!employee) return res.sendError('Employee profile not found', 404);
-    const now = dayjs();
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
     const todayStr = now.format('YYYY-MM-DD');
     const yesterdayStr = now.subtract(1, 'day').format('YYYY-MM-DD');
 
@@ -224,7 +227,9 @@ exports.getTodayAttendance = async (req, res) => {
     const employee = await Employee.findOne({ userId: req.user.id });
     if (!employee) return res.sendSuccess({});
     
-    const now = dayjs();
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
     const todayStr = now.format('YYYY-MM-DD');
     const yesterdayStr = now.subtract(1, 'day').format('YYYY-MM-DD');
 

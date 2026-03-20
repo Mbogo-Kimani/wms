@@ -13,6 +13,13 @@ const errorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
+  // Log all errors for the developer
+  if (err.statusCode >= 500) {
+    console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err);
+  } else {
+    console.warn(`[WARN] ${req.method} ${req.originalUrl} (${err.statusCode}): ${err.message}`);
+  }
+
   if (process.env.NODE_ENV === 'development') {
     res.status(err.statusCode).json({
       success: false,
@@ -31,11 +38,10 @@ const errorHandler = (err, req, res, next) => {
       });
     } else {
       // Programming or other unknown error: don't leak error details
-      console.error('ERROR 💥', err);
       res.status(500).json({
         success: false,
         status: 'error',
-        message: 'Something went very wrong!'
+        message: 'Something went very wrong! Please try again later.'
       });
     }
   }

@@ -2,11 +2,19 @@ const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const CompanySettings = require('../models/CompanySettings');
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 exports.getAttendanceOverview = async (req, res) => {
   try {
-    const today = dayjs().format('YYYY-MM-DD');
-    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
+    const today = now.format('YYYY-MM-DD');
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
     const todayDate = new Date(today);
     const yesterdayDate = new Date(yesterday);
 
@@ -112,8 +120,11 @@ exports.getWorkforceSummary = async (req, res) => {
 
 exports.getDepartmentAttendance = async (req, res) => {
   try {
-    const today = dayjs().format('YYYY-MM-DD');
-    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
+    const today = now.format('YYYY-MM-DD');
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
     const todayDate = new Date(today);
     const yesterdayDate = new Date(yesterday);
 
@@ -182,10 +193,13 @@ exports.getReliabilityScores = async (req, res) => {
 
 exports.getAttendanceTrend = async (req, res) => {
   try {
+    const settings = await CompanySettings.findOne();
+    const companyTz = settings?.timezone || 'UTC';
+    const now = dayjs().tz(companyTz);
     const last7DaysStrings = [];
     const last7DaysDates = [];
     for (let i = 6; i >= 0; i--) {
-      const d = dayjs().subtract(i, 'day').format('YYYY-MM-DD');
+      const d = now.subtract(i, 'day').format('YYYY-MM-DD');
       last7DaysStrings.push(d);
       last7DaysDates.push(new Date(d));
     }

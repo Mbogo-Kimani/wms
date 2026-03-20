@@ -24,7 +24,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
+    let message = 'Something went wrong';
+    
+    if (error.response) {
+      // Server responded with a status code outside the 2xx range
+      message = error.response.data?.message || `Error: ${error.response.status}`;
+    } else if (error.request) {
+      // Request was made but no response was received
+      message = 'Cannot connect to server. Please check your internet or try again later.';
+    } else {
+      // Something happened in setting up the request
+      message = error.message;
+    }
+
     toast.error(message);
     
     if (error.response?.status === 401) {

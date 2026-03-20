@@ -26,7 +26,9 @@ export default function Login() {
       if (data.user.role === 'worker') navigate('/worker');
       else navigate('/admin');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      const message = err.response?.data?.message || 
+                     (err.request ? 'Unable to connect to service. Please check your connection.' : 'Invalid email or password');
+      setError(message);
     } finally {
       setLoading(false);
     }
