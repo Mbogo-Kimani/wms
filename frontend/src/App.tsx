@@ -54,6 +54,7 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="pending-registrations" element={<PendingRegistrations />} />
+            <Route path="my-attendance" element={<WorkerAttendanceHistory />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="employees" element={<Employees />} />
             <Route path="shifts" element={<Shifts />} />

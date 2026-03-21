@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Employee = require('../models/Employee');
 const LeaveBalance = require('../models/LeaveBalance');
 const AuditLog = require('../models/AuditLog');
+const WorkSchedule = require('../models/WorkSchedule');
 const emailService = require('../services/emailService');
 
 exports.getPendingRegistrations = async (req, res, next) => {
@@ -97,6 +98,7 @@ exports.rejectWorker = async (req, res, next) => {
     const employee = await Employee.findOne({ userId });
     if (employee) {
         await LeaveBalance.deleteMany({ employeeId: employee._id });
+        await WorkSchedule.deleteMany({ employeeId: employee._id });
         await Employee.findByIdAndDelete(employee._id);
     }
 

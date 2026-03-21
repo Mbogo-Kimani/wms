@@ -26,7 +26,8 @@ export default function AdminLayout() {
 
   const navItems = [
     { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard', roles: ['admin', 'manager', 'supervisor'] },
-    { path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance', roles: ['admin', 'manager', 'supervisor'] },
+    { path: '/admin/my-attendance', icon: <Clock size={20} />, label: 'My Attendance', roles: ['manager', 'supervisor'] },
+    { path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance Management', roles: ['admin', 'manager', 'supervisor'] },
     { path: '/admin/pending-registrations', icon: <UserCheck size={20} />, label: 'Pending Registrations', roles: ['admin', 'manager'] },
     { path: '/admin/employees', icon: <Users size={20} />, label: 'Employees', roles: ['admin', 'manager', 'supervisor'] },
     { path: '/admin/shifts', icon: <Clock size={20} />, label: 'Shifts', roles: ['admin', 'manager', 'supervisor'] },

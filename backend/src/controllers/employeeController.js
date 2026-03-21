@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const LeaveBalance = require('../models/LeaveBalance');
+const WorkSchedule = require('../models/WorkSchedule');
 
 exports.getEmployees = async (req, res, next) => {
   try {
@@ -166,6 +167,9 @@ exports.deleteEmployee = async (req, res, next) => {
     
     // 3b. Delete Leave requests
     await LeaveRequest.deleteMany({ employeeId: employee._id });
+    
+    // 3c. Delete Work Schedules
+    await WorkSchedule.deleteMany({ employeeId: employee._id });
 
     // 4. Delete Employee profile
     await Employee.findByIdAndDelete(req.params.id);

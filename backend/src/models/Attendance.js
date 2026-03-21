@@ -15,7 +15,7 @@ const attendanceSchema = new mongoose.Schema({
     lng: { type: Number }
   },
   signInMethod: { type: String, enum: ['mobile', 'web', 'manual', 'kiosk'], default: 'mobile' },
-  signOutMethod: { type: String, enum: ['mobile', 'web', 'manual', 'kiosk'] },
+  signOutMethod: { type: String, enum: ['mobile', 'web', 'manual', 'kiosk', 'system'] },
   isHolidayWork: { type: Boolean, default: false },
   isWeekendWork: { type: Boolean, default: false },
   religiousOverride: { type: Boolean, default: false },
@@ -24,6 +24,7 @@ const attendanceSchema = new mongoose.Schema({
     enum: ['present', 'late', 'absent', 'on_leave', 'half_day', 'holiday_work', 'weekend_work', 'religious_day_off', 'overtime'], 
     default: 'present' 
   },
+  lateSignInMinutes: { type: Number, default: 0 },
   overtimeMinutes: { type: Number, default: 0 }
 }, { timestamps: true });
 

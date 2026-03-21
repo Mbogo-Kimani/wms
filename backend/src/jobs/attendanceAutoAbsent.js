@@ -25,19 +25,26 @@ cron.schedule('0 3 * * *', async () => {
     const employees = await Employee.find({ status: 'active' });
 
     for (const employee of employees) {
+      const WorkSchedule = require('../models/WorkSchedule');
+      const targetMidnight = dayjs.utc(targetDateStr).toDate();
+      const schedule = await WorkSchedule.findOne({ employeeId: employee._id, date: targetMidnight });
+
+      const isWeekendOverride = schedule?.isWeekendShift;
+      const isHolidayOverride = schedule?.isHolidayShift;
+
       // 1. Skip if it's their religious rest day
       if (employee.religiousRestDay === dayNameOnTarget) {
         console.log(`Skipping auto-absent for ${employee.name} (Religious Rest Day: ${dayNameOnTarget})`);
         continue;
       }
 
-      // 2. Skip if it's a weekend and they aren't a weekend worker
-      if (weekendOnTarget && !employee.weekendWorker) {
+      // 2. Skip if it's a weekend and they aren't a weekend worker (and no override)
+      if (weekendOnTarget && !employee.weekendWorker && !isWeekendOverride) {
         continue;
       }
 
-      // 3. Skip if it's a holiday and they aren't a holiday worker
-      if (holidayOnTarget && !employee.holidayWorker) {
+      // 3. Skip if it's a holiday and they aren't a holiday worker (and no override)
+      if (holidayOnTarget && !employee.holidayWorker && !isHolidayOverride) {
         continue;
       }
 
@@ -49,7 +56,7 @@ cron.schedule('0 3 * * *', async () => {
       if (!attendance) {
         await Attendance.create({
           employeeId: employee._id,
-          shiftId: employee.shiftId,
+          shiftId: schedule?.shiftId || employee.shiftId,
           date: targetDateStr,
           status: 'absent',
           signInMethod: 'manual'

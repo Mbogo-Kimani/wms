@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { background: #0f172a; padding: 30px; text-align: center; }
+        .header h1 { color: #f97316; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+        .header h1 span { color: #ffffff; }
+        .content { padding: 40px; color: #334155; line-height: 1.6; }
+        .content h2 { color: #0f172a; margin-top: 0; }
+        .schedule-card { background: #f8fafc; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid #e2e8f0; }
+        .schedule-item { margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .schedule-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .label { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+        .value { font-size: 16px; font-weight: 600; color: #0f172a; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: bold; margin-left: 8px; vertical-align: middle; }
+        .badge-weekend { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+        .badge-holiday { background: #f0f9ff; color: #0369a1; border: 1px solid #e0f2fe; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
+        .btn { display: inline-block; padding: 14px 28px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>INDUSTRIAL<span>WMS</span></h1>
+        </div>
+        <div class="content">
+            <h2>New Work Schedule Assigned</h2>
+            <p>Hello <b>{{userName}}</b>, a new work schedule override has been assigned to you. Please find the details below:</p>
+            
+            <div class="schedule-card">
+                <div class="schedule-item">
+                    <span class="label">Date</span>
+                    <span class="value">{{date}}</span>
+                </div>
+                <div class="schedule-item">
+                    <span class="label">Shift</span>
+                    <span class="value">{{shiftName}} ({{shiftTime}})</span>
+                </div>
+                <div class="schedule-item">
+                    <span class="label">Duty Type</span>
+                    <div style="margin-top: 5px;">
+                        <span class="badge badge-weekend">SCHEDULED OVERRIDE</span>
+                    </div>
+                </div>
+                <div class="schedule-item">
+                    <span class="label">Notes</span>
+                    <span class="value" style="font-weight: normal; font-style: italic;">{{notes}}</span>
+                </div>
+            </div>
+            
+            <p>Please ensure you are present and clock in on time. You can view your full schedule and attendance history in your dashboard.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{actionUrl}}" class="btn">View Worker Dashboard</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+            <p>This is an automated system notification. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

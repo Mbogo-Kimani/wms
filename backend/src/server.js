@@ -21,6 +21,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 
 // Cron Jobs
 require('./jobs/attendanceAutoAbsent');
+require('./jobs/attendanceAutoClockOut');
 require('./jobs/leaveYearlyReset');
 require('./jobs/antiSleep');
 
@@ -56,6 +57,7 @@ app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/schedules', require('./routes/scheduleRoutes'));
+app.use('/api/holiday-work-requests', require('./routes/holidayWorkRequestRoutes'));
 
 app.use(errorHandler);
 

@@ -37,6 +37,7 @@ const renderTemplate = (templateName, data = {}) => {
 
 exports.sendEmail = async (to, subject, htmlContent) => {
   try {
+    console.log(`Sending email to ${to} with subject: ${subject}`);
     const result = await client.transactionalEmails.sendTransacEmail({
       subject,
       htmlContent,
@@ -48,15 +49,21 @@ exports.sendEmail = async (to, subject, htmlContent) => {
         ? to.map(email => ({ email })) 
         : to.split(',').map(email => ({ email: email.trim() }))
     });
+    console.log('Email sent successfully, messageId:', result.messageId);
     return result;
   } catch (error) {
-    console.error('Brevo API Error:', error);
+    console.error('Brevo API Error:', error.response?.data || error.message);
     throw error;
   }
 };
 
 exports.sendTemplate = async (to, subject, templateName, data) => {
+  console.log(`Rendering template ${templateName} for ${to}`);
   const htmlContent = renderTemplate(templateName, data);
+  if (!htmlContent) {
+    console.error(`Template rendering failed for ${templateName}`);
+    return;
+  }
   return await exports.sendEmail(to, subject, htmlContent);
 };
 
@@ -116,5 +123,50 @@ exports.sendPasswordResetEmail = async (user, token) => {
   await exports.sendTemplate(user.email, 'Password Reset Request', 'passwordReset', {
     userName: user.name,
     actionUrl: resetUrl
+  });
+};
+
+exports.notifyWorkerNewSchedule = async (employee, schedule) => {
+  const dayjs = require('dayjs');
+  await exports.sendTemplate(employee.email, 'New Work Schedule Update', 'workSchedule', {
+    userName: employee.name,
+    date: dayjs(schedule.date).format('dddd, DD MMMM YYYY'),
+    shiftName: schedule.shiftId.name,
+    shiftTime: `${schedule.shiftId.startTime} - ${schedule.shiftId.endTime}`,
+    isWeekendShift: schedule.isWeekendShift,
+    isHolidayShift: schedule.isHolidayShift,
+    notes: schedule.notes,
+    actionUrl: `${process.env.FRONTEND_URL}/dashboard`
+  });
+};
+
+exports.notifyAdminHolidayRequest = async (employee, holiday) => {
+  const adminEmail = process.env.ADMIN_EMAIL || 'kimanimbogo1st@gmail.com';
+  const dayjs = require('dayjs');
+  await exports.sendTemplate(adminEmail, 'New Holiday Work Request', 'accountNotification', {
+    userName: 'Admin',
+    message: `Worker ${employee.name} has requested to work on the upcoming holiday: ${holiday.name} (${dayjs(holiday.date).format('DD MMM YYYY')}).`,
+    actionUrl: `${process.env.FRONTEND_URL}/admin/holidays`
+  });
+};
+
+exports.notifyWorkerHolidayRequestResolved = async (employee, holiday, status) => {
+  await exports.sendTemplate(employee.email, `Holiday Work Request ${status.toUpperCase()}`, 'accountNotification', {
+    userName: employee.name,
+    message: `Your request to work on ${holiday.name} has been ${status}.`
+  });
+};
+
+exports.notifyNewMemo = async (emails, memo) => {
+  await exports.sendTemplate(emails, `INTERNAL MEMO: ${memo.title}`, 'memoNotification', {
+    memoTitle: memo.title,
+    memoMessage: memo.message
+  });
+};
+
+exports.notifyWorkerHolidayShiftCancelled = async (employee, date) => {
+  await exports.sendTemplate(employee.email, 'Holiday Shift Cancelled', 'accountNotification', {
+    userName: employee.name,
+    message: `Your scheduled duty for the holiday on ${dayjs(date).format('DD MMM YYYY')} has been cancelled. Your dashboard has been updated accordingly.`
   });
 };

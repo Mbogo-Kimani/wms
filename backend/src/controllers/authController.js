@@ -24,7 +24,6 @@ exports.register = async (req, res, next) => {
       if (!hasEmployee && existingUser.role === 'worker') {
         // Safe to remove orphan and let new registration proceed
         await User.findByIdAndDelete(existingUser._id);
-        console.log(`Cleaned up orphaned user: ${email}`);
       } else {
         return res.sendError('User already exists with an active profile', 400);
       }

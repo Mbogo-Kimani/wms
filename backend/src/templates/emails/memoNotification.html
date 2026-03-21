@@ -10,10 +10,10 @@
         .header h1 { color: #f97316; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
         .header h1 span { color: #ffffff; }
         .content { padding: 40px; color: #334155; line-height: 1.6; }
-        .content h2 { color: #0f172a; margin-top: 0; }
+        .content h2 { color: #0f172a; margin-top: 0; font-size: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px; }
+        .memo-body { background: #f8fafc; border-radius: 12px; padding: 25px; margin: 20px 0; border-left: 4px solid #3b82f6; }
         .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
-        .btn { display: inline-block; padding: 14px 28px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-        .alert { border-left: 4px solid #f97316; background: #fff7ed; padding: 15px; margin: 20px 0; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -22,19 +22,22 @@
             <h1>INDUSTRIAL<span>WMS</span></h1>
         </div>
         <div class="content">
-            <h2>Account Notification</h2>
-            <div class="alert">
-                <p><b>Message:</b> {{message}}</p>
+            <h2>Internal Memo: {{memoTitle}}</h2>
+            <p>Hello team, a new official communication has been issued:</p>
+            
+            <div class="memo-body">
+                <p style="margin-top: 0; white-space: pre-wrap;">{{memoMessage}}</p>
             </div>
-            <p>Hello {{userName}}, this is an automated notification regarding your account status or activity in the system.</p>
             
-            <p>Please click the button below to take action:</p>
-            <a href="{{actionUrl}}" class="btn">View Details</a>
+            <p>You can view all active circulars and previous memos in your personnel dashboard.</p>
             
-            <p>If you did not expect this notification, please contact the system administrator immediately.</p>
+            <div style="text-align: center;">
+                <a href="{{actionUrl}}/worker/memos" class="btn">Open Communications Hub</a>
+            </div>
         </div>
         <div class="footer">
             <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+            <p>This is an official system notification. Please refer to the dashboard for further details.</p>
         </div>
     </div>
 </body>

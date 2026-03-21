@@ -57,6 +57,38 @@ export default function WorkerDashboard() {
     }
   });
 
+  const { data: holidays } = useQuery({
+    queryKey: ['upcomingHolidays'],
+    queryFn: async () => {
+      const res = await api.get('/holidays/upcoming');
+      return res.data;
+    }
+  });
+
+  const { data: mySchedules } = useQuery({
+    queryKey: ['mySchedules'],
+    queryFn: async () => {
+      const res = await api.get('/schedules/my');
+      return res.data;
+    }
+  });
+
+  const { data: myHolidayRequests, refetch: refetchRequests } = useQuery({
+    queryKey: ['myHolidayRequests'],
+    queryFn: async () => {
+      const res = await api.get('/holiday-work-requests/my');
+      return res.data;
+    }
+  });
+
+  const requestWorkMutation = useMutation({
+    mutationFn: (holidayId: string) => api.post('/holiday-work-requests', { holidayId }),
+    onSuccess: () => {
+      toast.success('Work request submitted successfully!');
+      refetchRequests();
+    }
+  });
+
   const latestMemo = memos?.[0];
 
   useEffect(() => { getLocation(); }, []);
@@ -173,6 +205,86 @@ export default function WorkerDashboard() {
           <p className="text-2xl font-black text-industrial-slate">{memos?.length || 0}</p>
         </Card>
       </div>
+
+      <Card className="!p-6">
+        <h3 className="font-bold text-industrial-slate mb-4 flex items-center gap-2">
+          <Calendar size={20} className="text-industrial-blue" />
+          Upcoming Holidays
+        </h3>
+        <div className="space-y-3">
+          {holidays?.map((h: any) => {
+            const existingRequest = myHolidayRequests?.find((r: any) => r.holidayId?._id === h._id);
+            return (
+              <div key={h._id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group">
+                <div>
+                  <p className="font-bold text-sm text-industrial-slate">{h.name}</p>
+                  <p className="text-[10px] font-bold text-industrial-blue uppercase">
+                    {dayjs(h.date).format('ddd, DD MMM YYYY')}
+                  </p>
+                </div>
+                <div>
+                  {existingRequest ? (
+                    <Badge variant={
+                      existingRequest.status === 'approved' ? 'success' : 
+                      existingRequest.status === 'rejected' ? 'danger' : 'warning'
+                    }>
+                      {existingRequest.status.toUpperCase()}
+                    </Badge>
+                  ) : (
+                    <button 
+                      onClick={() => requestWorkMutation.mutate(h._id)}
+                      disabled={requestWorkMutation.isPending}
+                      className="text-[10px] font-black uppercase tracking-widest text-industrial-blue bg-white px-3 py-1.5 rounded-lg border border-industrial-blue/20 hover:bg-industrial-blue hover:text-white transition-all shadow-sm"
+                    >
+                      {requestWorkMutation.isPending ? 'Sending...' : 'Request to Work'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {(!holidays || holidays.length === 0) && (
+            <div className="text-center p-4 italic text-xs text-industrial-gray">No upcoming holidays scheduled</div>
+          )}
+        </div>
+      </Card>
+
+      {/* Upcoming Schedule Overrides */}
+      {Array.isArray(mySchedules) && mySchedules.length > 0 && (
+        <Card className="!p-6 border-industrial-orange/20 border-l-4">
+          <h3 className="font-bold text-industrial-slate mb-4 flex items-center gap-2">
+            <Calendar size={20} className="text-industrial-orange" />
+            Your Special Assignments
+          </h3>
+          <div className="grid grid-cols-1 gap-3">
+            {mySchedules.map((s: any) => (
+              <div key={s._id} className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-industrial-orange uppercase tracking-wider">
+                    {dayjs(s.date).format('dddd, DD MMM')}
+                  </span>
+                  <Badge variant={s.isHolidayShift ? 'info' : 'warning'} className="text-[8px] px-1.5 py-0">
+                    {s.isHolidayShift ? 'Holiday' : 'Override'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 text-industrial-slate">
+                  <Clock size={12} className="text-industrial-gray" />
+                  <span className="text-sm font-bold">{s.shiftId?.name}</span>
+                  <span className="text-xs text-industrial-gray font-medium">({s.shiftId?.startTime} - {s.shiftId?.endTime})</span>
+                </div>
+                {s.notes && (
+                  <p className="text-[10px] text-industrial-gray italic mt-1 border-t border-gray-50 pt-1 line-clamp-1">
+                    {s.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-industrial-gray mt-4 bg-gray-50 p-3 rounded-xl italic">
+            Note: These are special assignments outside your regular profile.
+          </p>
+        </Card>
+      )}
 
       <Card className="!p-6 bg-white border-dashed border-2 border-gray-200">
         <h3 className="font-bold text-industrial-slate mb-4 flex items-center justify-between">

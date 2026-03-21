@@ -19,12 +19,12 @@ exports.createMemo = async (req, res, next) => {
     const emails = employees.map(emp => emp.email).filter(email => email);
     
     if (emails.length > 0) {
-      await sendEmail(
-        emails.join(','), 
-        `New Memo: ${memo.title}`, 
-        memo.message, 
-        `<h3>${memo.title}</h3><p>${memo.message}</p>`
-      );
+      const emailService = require('../services/emailService');
+      try {
+        await emailService.notifyNewMemo(emails, memo);
+      } catch (emailErr) {
+        console.error('Failed to send memo notification:', emailErr.message);
+      }
     }
 
     res.sendSuccess(memo, 'Memo created', 201);

@@ -6,7 +6,7 @@ import Card from '../components/Card';
 import StatCard from '../components/StatCard';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, PieChart, Pie, Cell 
+  LineChart, Line, PieChart, Pie, Cell, Legend 
 } from 'recharts';
 import { Users, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
 
@@ -23,6 +23,14 @@ export default function AnalyticsDashboard() {
     queryKey: ['analytics-dept'],
     queryFn: async () => {
       const res = await api.get('/analytics/department-attendance');
+      return res.data;
+    }
+  });
+
+  const { data: trendData } = useQuery({
+    queryKey: ['analytics-trend'],
+    queryFn: async () => {
+      const res = await api.get('/analytics/attendance-trend');
       return res.data;
     }
   });
@@ -83,15 +91,35 @@ export default function AnalyticsDashboard() {
         </Card>
 
         <Card>
+          <h2 className="text-xl font-bold text-industrial-slate mb-6 text-center">7-Day Attendance Trend</h2>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1E3A5F', color: '#fff', borderRadius: '12px', border: 'none' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="present" name="Present" stroke="#1E3A5F" strokeWidth={3} dot={{ r: 4, fill: '#1E3A5F' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="absent" name="Absent" stroke="#EA580C" strokeWidth={3} dot={{ r: 4, fill: '#EA580C' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card>
           <h3 className="font-bold text-industrial-slate mb-6">Workforce Distribution</h3>
           <div className="h-80 w-full flex items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={[
-                    { name: 'On Site', value: attendance?.details.present || 0 },
-                    { name: 'On Leave', value: attendance?.details.onLeave || 0 },
-                    { name: 'Absent', value: attendance?.details.absent || 0 },
+                    { name: 'On Site', value: attendance?.details?.present || 0 },
+                    { name: 'On Leave', value: attendance?.details?.onLeave || 0 },
+                    { name: 'Absent', value: attendance?.details?.absent || 0 },
                   ]}
                   innerRadius={80}
                   outerRadius={100}
@@ -106,7 +134,7 @@ export default function AnalyticsDashboard() {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute flex flex-col items-center">
-              <span className="text-2xl font-black text-industrial-slate">{attendance?.details.total || 0}</span>
+              <span className="text-2xl font-black text-industrial-slate">{attendance?.details?.total || 0}</span>
               <span className="text-[10px] font-bold text-industrial-gray uppercase tracking-widest">Total Staff</span>
             </div>
           </div>

@@ -12,7 +12,8 @@ export default function ReportsPage() {
     queryKey: ['daily-attendance-pts'],
     queryFn: async () => {
       const res = await api.get('/reports/daily-attendance');
-      return res.data.data || { present: 0, late: 0, total: 0, absent: 0, onLeave: 0 };
+      // res.data is already res.data.data due to interceptor
+      return res.data || { present: 0, late: 0, total: 0, absent: 0, onLeave: 0 };
     }
   });
 
@@ -20,11 +21,12 @@ export default function ReportsPage() {
     queryKey: ['report-stats'],
     queryFn: async () => {
       const res = await api.get('/reports/stats');
-      return res.data.data || { generatedCount: 0, accuracy: "99.9" };
+      return res.data || { generatedCount: 0, accuracy: "99.9" };
     }
   });
 
   const [viewingReport, setViewingReport] = React.useState<string | null>(null);
+  const [activeReportKey, setActiveReportKey] = React.useState<string | null>(null);
   const [previewData, setPreviewData] = React.useState<any[]>([]);
 
   const reports = [
@@ -33,6 +35,61 @@ export default function ReportsPage() {
     { title: 'Leave Utilization', description: 'Analysis of leave requests and balances across departments.', icon: <Calendar className="text-orange-600" />, type: 'HR', reportKey: 'Leaves' },
     { title: 'System Audit Logs', description: 'Security and access logs for the last 30 days.', icon: <FileText className="text-slate-600" />, type: 'Security', reportKey: 'Audit' },
   ];
+
+  const REPORT_CONFIG: Record<string, { headers: string[], renderRow: (row: any) => React.ReactNode }> = {
+    'Daily': {
+      headers: ['Date', 'Employee', 'Status', 'Sign In'],
+      renderRow: (row) => (
+        <>
+          <td className="py-4 font-bold text-industrial-slate">{new Date(row.date).toLocaleDateString()}</td>
+          <td className="py-4 text-industrial-gray">{row.employeeId?.name || 'N/A'}</td>
+          <td className="py-4">
+            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+              row.status === 'present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}>
+              {row.status}
+            </span>
+          </td>
+          <td className="py-4 text-industrial-gray">{row.signInTime ? new Date(row.signInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</td>
+        </>
+      )
+    },
+    'Audit': {
+      headers: ['Timestamp', 'User', 'Action', 'Entity'],
+      renderRow: (row) => (
+        <>
+          <td className="py-4 font-bold text-industrial-slate">{new Date(row.timestamp).toLocaleString()}</td>
+          <td className="py-4 text-industrial-gray">{row.userId?.name || 'System'}</td>
+          <td className="py-4 font-medium text-industrial-blue">{row.action}</td>
+          <td className="py-4 text-industrial-gray">{row.entityType}</td>
+        </>
+      )
+    },
+    'Leaves': {
+      headers: ['Employee', 'Type', 'Start Date', 'Status'],
+      renderRow: (row) => (
+        <>
+          <td className="py-4 font-bold text-industrial-slate">{row.employeeId?.name || 'N/A'}</td>
+          <td className="py-4 text-industrial-gray">{row.leaveType}</td>
+          <td className="py-4 text-industrial-gray">{new Date(row.startDate).toLocaleDateString()}</td>
+          <td className="py-4 uppercase text-[10px] font-bold text-industrial-orange">{row.status}</td>
+        </>
+      )
+    },
+    'Shift': {
+      headers: ['Metric / Status', 'Total Occurrences', 'Significance', 'Trend'],
+      renderRow: (row) => (
+        <>
+          <td className="py-4 font-bold text-industrial-slate uppercase">{row._id || 'Standard'}</td>
+          <td className="py-4 text-xl font-black text-industrial-blue">{row.count || 0}</td>
+          <td className="py-4 text-industrial-gray italic text-xs">Platform Distribution</td>
+          <td className="py-4">
+             <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold">STABLE</span>
+          </td>
+        </>
+      )
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -55,8 +112,10 @@ export default function ReportsPage() {
       if (!report) return;
       
       setViewingReport(title);
+      setActiveReportKey(report.reportKey);
       const res = await api.get(`/reports/export/${report.reportKey}?format=json`);
-      setPreviewData(Array.isArray(res.data.data) ? res.data.data.slice(0, 10) : []);
+      const data = res.data; // Already unwrapped by interceptor
+      setPreviewData(Array.isArray(data) ? data.slice(0, 10) : []);
     } catch (err) {
       console.error('View failed:', err);
       setPreviewData([]);
@@ -157,30 +216,20 @@ export default function ReportsPage() {
             </div>
             
             <div className="flex-1 overflow-auto p-6">
-              {previewData.length > 0 ? (
+              {previewData.length > 0 && activeReportKey && REPORT_CONFIG[activeReportKey] ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="text-[10px] font-black uppercase tracking-widest text-industrial-gray border-b border-gray-100">
-                        <th className="pb-4">Date</th>
-                        <th className="pb-4">Employee</th>
-                        <th className="pb-4">Status</th>
-                        <th className="pb-4">Sign In</th>
+                        {REPORT_CONFIG[activeReportKey].headers.map((h, idx) => (
+                          <th key={idx} className="pb-4">{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {previewData.map((row, i) => (
                         <tr key={i} className="text-sm">
-                          <td className="py-4 font-bold text-industrial-slate">{new Date(row.date).toLocaleDateString()}</td>
-                          <td className="py-4 text-industrial-gray">{row.employeeId?.name || 'N/A'}</td>
-                          <td className="py-4">
-                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                              row.status === 'present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {row.status}
-                            </span>
-                          </td>
-                          <td className="py-4 text-industrial-gray">{row.signInTime ? new Date(row.signInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</td>
+                          {REPORT_CONFIG[activeReportKey!].renderRow(row)}
                         </tr>
                       ))}
                     </tbody>

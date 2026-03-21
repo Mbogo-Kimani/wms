@@ -4,8 +4,8 @@ const { signIn, signOut, getTodayAttendance, getWorkerHistory, getAllHistory } =
 const { protect, authorize } = require('../middlewares/auth');
 
 router.get('/today', protect, getTodayAttendance);
-router.post('/signin', protect, authorize('worker', 'supervisor'), signIn);
-router.post('/signout', protect, authorize('worker', 'supervisor'), signOut);
+router.post('/signin', protect, authorize('worker', 'supervisor', 'manager', 'admin'), signIn);
+router.post('/signout', protect, authorize('worker', 'supervisor', 'manager', 'admin'), signOut);
 router.get('/history', protect, getWorkerHistory);
 router.get('/all-history', protect, authorize('admin', 'manager', 'supervisor'), getAllHistory);
 module.exports = router;

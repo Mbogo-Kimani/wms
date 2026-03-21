@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 
 export default function AdminAttendance() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [selectedDate, setSelectedDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [shiftTypeFilter, setShiftTypeFilter] = useState('all');
 
@@ -42,8 +42,8 @@ export default function AdminAttendance() {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex bg-gray-100 p-1 rounded-lg">
           <button 
-            onClick={() => { setStatusFilter('all'); setShiftTypeFilter('all'); }}
-            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${statusFilter === 'all' && shiftTypeFilter === 'all' ? 'bg-white text-industrial-blue shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
+            onClick={() => { setStatusFilter('all'); setShiftTypeFilter('all'); setSelectedDate(''); }}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${statusFilter === 'all' && shiftTypeFilter === 'all' && !selectedDate ? 'bg-white text-industrial-blue shadow-sm' : 'text-industrial-gray hover:text-industrial-slate'}`}
           >
             All History
           </button>

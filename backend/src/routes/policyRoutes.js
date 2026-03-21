@@ -3,7 +3,7 @@ const router = express.Router();
 const policyController = require('../controllers/policyController');
 const { protect, authorize } = require('../middlewares/auth');
 
-router.use(protect, authorize('admin'));
+router.use(protect, authorize('admin', 'manager'));
 
 router.get('/', policyController.getPolicies);
 router.post('/', policyController.createPolicy);

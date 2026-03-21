@@ -21,6 +21,7 @@ const verifyWifi = (req) => {
 exports.signIn = async (req, res) => {
   try {
     const { lat, lng, ssid } = req.body;
+    let lateSignInMinutes = 0;
     const employee = await Employee.findOne({ userId: req.user.id }).populate('shiftId');
     if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
 
@@ -36,8 +37,17 @@ exports.signIn = async (req, res) => {
     const weekendToday = await isWeekend(now);
     const dayName = now.format('dddd');
     const todayStr = now.format('YYYY-MM-DD');
+    const WorkSchedule = require('../models/WorkSchedule');
+    
+    // Use UTC midnight of the DATE string to match how schedules are stored
+    const todayMidnight = dayjs.utc(todayStr).toDate();
+    const schedule = await WorkSchedule.findOne({ employeeId: employee._id, date: todayMidnight }).populate('shiftId');
 
-    if (employee.religiousRestDay === dayName && !req.body.religiousOverride) {
+    const effectiveShift = schedule?.shiftId || shift;
+    const isWeekendOverride = schedule?.isWeekendShift;
+    const isHolidayOverride = schedule?.isHolidayShift;
+
+    if (employee.religiousRestDay === dayName && !req.body.religiousOverride && !schedule) {
       return res.status(403).json({ 
         success: false,
         message: `Attendance is restricted. Today is your religious rest day (${dayName}). (Override required)`,
@@ -45,11 +55,11 @@ exports.signIn = async (req, res) => {
       });
     }
 
-    if (weekendToday && !employee.weekendWorker) {
+    if (weekendToday && !employee.weekendWorker && !isWeekendOverride) {
       return res.sendError(`You are not scheduled for weekend work. Attendance restricted. (Today: ${dayName})`, 403);
     }
 
-    if (holidayToday && !employee.holidayWorker) {
+    if (holidayToday && !employee.holidayWorker && !isHolidayOverride) {
       return res.sendError(`Attendance is restricted on public holidays for your profile. (Date: ${now.format('YYYY-MM-DD')})`, 403);
     }
 
@@ -58,17 +68,21 @@ exports.signIn = async (req, res) => {
 
     if (policy) {
       let startTime, endTime;
-      if (holidayToday) {
+      if (schedule && schedule.shiftId) {
+        // Use scheduled shift!
+        startTime = dayjs(`2000-01-01 ${schedule.shiftId.startTime}`).subtract(1, 'hour').format('HH:mm');
+        endTime = schedule.shiftId.endTime;
+      } else if (holidayToday) {
         startTime = policy.holidayLoginStart;
         endTime = policy.holidayLoginEnd;
       } else if (weekendToday) {
         startTime = policy.weekendLoginStart;
         endTime = policy.weekendLoginEnd;
-      } else if (shift && shift.startTime && shift.endTime) {
+      } else if (effectiveShift && effectiveShift.startTime && effectiveShift.endTime) {
         // Dynamic window based on actual shift!
         try {
-          startTime = dayjs(`2000-01-01 ${shift.startTime}`).subtract(1, 'hour').format('HH:mm');
-          endTime = shift.endTime;
+          startTime = dayjs(`2000-01-01 ${effectiveShift.startTime}`).subtract(1, 'hour').format('HH:mm');
+          endTime = effectiveShift.endTime;
         } catch (e) {
           startTime = policy.regularLoginStart;
           endTime = policy.regularLoginEnd;
@@ -91,7 +105,7 @@ exports.signIn = async (req, res) => {
       const isWithinYesterday = (now.isSame(startYesterday) || now.isAfter(startYesterday)) && now.isBefore(endYesterday);
 
       if (!isWithinToday && !isWithinYesterday) {
-        return res.sendError(`Login window is currently closed. (Shift: ${shift?.name || 'Policy'} ${startTime}-${endTime}). Current time: ${now.format('HH:mm')}`, 403);
+        return res.sendError(`Login window is currently closed. (Shift: ${effectiveShift?.name || 'Policy'} ${startTime}-${endTime}). Current time: ${now.format('HH:mm')}`, 403);
       }
 
       // Determine Primary Window for Lateness and Work Date
@@ -101,12 +115,13 @@ exports.signIn = async (req, res) => {
       // Check for lateness
       const gracePeriod = policy.gracePeriodMinutes || 15;
       let latenessBase = primaryStartLimit;
-      if (shift && shift.startTime && !holidayToday && !weekendToday) {
+      if (effectiveShift && effectiveShift.startTime && !holidayToday && !weekendToday) {
         latenessBase = dayjs(primaryStartLimit).add(1, 'hour'); 
       }
 
       if (now.isAfter(latenessBase.add(gracePeriod, 'minute'))) {
         status = 'late';
+        lateSignInMinutes = now.diff(latenessBase, 'minute');
       }
     }
 
@@ -122,6 +137,7 @@ exports.signIn = async (req, res) => {
         existing.signInLocation = { lat, lng };
         existing.signInMethod = req.body.method || 'mobile';
         existing.status = status;
+        existing.lateSignInMinutes = lateSignInMinutes;
         existing.isHolidayWork = holidayToday;
         existing.isWeekendWork = weekendToday;
         existing.religiousOverride = !!req.body.religiousOverride;
@@ -136,7 +152,7 @@ exports.signIn = async (req, res) => {
 
     const attendance = await Attendance.create({
       employeeId: employee._id,
-      shiftId: shift._id,
+      shiftId: effectiveShift._id,
       date: workDate,
       signInTime: now.toDate(),
       signInLocation: { lat, lng },
@@ -144,7 +160,8 @@ exports.signIn = async (req, res) => {
       isHolidayWork: holidayToday,
       isWeekendWork: weekendToday,
       religiousOverride: !!req.body.religiousOverride,
-      status
+      status,
+      lateSignInMinutes
     });
 
     await logAction(req, 'attendance_signin', 'Attendance', attendance._id, { method: req.body.method });
@@ -186,7 +203,10 @@ exports.signOut = async (req, res) => {
     if (attendance.signOutTime) return res.sendError('Already signed out.', 400);
 
     const shift = employee.shiftId;
+    let rawOvertime = 0;
     let overtimeMinutes = 0;
+    let finalStatus = attendance.status;
+    let adjustmentApplied = 0;
 
     if (shift && shift.endTime) {
       try {
@@ -195,16 +215,32 @@ exports.signOut = async (req, res) => {
         
         let shiftEndTime = dayjs.tz(attendance.date, companyTz).hour(parseInt(endHour)).minute(parseInt(endMin)).second(0);
         
-        // If end time is before start time, it crosses midnight
         if (parseInt(endHour) < parseInt(startHour)) {
           shiftEndTime = shiftEndTime.add(1, 'day');
         }
 
-        const overtimeThreshold = shiftEndTime.add(shift.overtimeAfterMinutes || 0, 'minute');
+        if (now.isAfter(shiftEndTime)) {
+          rawOvertime = now.diff(shiftEndTime, 'minute');
+          const lateMins = attendance.lateSignInMinutes || 0;
 
-        if (now.isAfter(overtimeThreshold)) {
-          overtimeMinutes = now.diff(shiftEndTime, 'minute');
-          attendance.status = 'overtime';
+          if (lateMins > 0) {
+            adjustmentApplied = lateMins;
+            const balance = rawOvertime - lateMins;
+
+            if (balance > 0) {
+              overtimeMinutes = balance;
+              finalStatus = 'overtime';
+            } else if (balance < 0) {
+              overtimeMinutes = 0;
+              finalStatus = 'late';
+            } else {
+              overtimeMinutes = 0;
+              finalStatus = 'present';
+            }
+          } else {
+            overtimeMinutes = rawOvertime;
+            finalStatus = 'overtime';
+          }
         }
       } catch (err) {
         console.error('Error calculating overtime during sign-out:', err);
@@ -213,10 +249,21 @@ exports.signOut = async (req, res) => {
 
     attendance.signOutTime = now.toDate();
     attendance.signOutLocation = { lat, lng };
+    attendance.signOutMethod = req.body.method || 'mobile';
     attendance.overtimeMinutes = overtimeMinutes;
+    attendance.status = finalStatus;
     await attendance.save();
 
-    res.sendSuccess(attendance, 'Signed out successfully');
+    res.sendSuccess({
+        attendance,
+        summary: {
+            status: finalStatus,
+            rawOvertime,
+            lateSignInMinutes: attendance.lateSignInMinutes || 0,
+            adjustmentApplied,
+            finalOvertime: overtimeMinutes
+        }
+    }, 'Signed out successfully');
   } catch (error) {
     res.sendError(error.message, 500);
   }
