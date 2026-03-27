@@ -24,6 +24,7 @@ require('./jobs/attendanceAutoAbsent');
 require('./jobs/attendanceAutoClockOut');
 require('./jobs/leaveYearlyReset');
 require('./jobs/antiSleep');
+require('./jobs/scheduleOverrideCleanup');
 
 // Connect to Database
 connectDB();
